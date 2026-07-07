@@ -242,7 +242,7 @@
           <div class="htext">
             <div class="step-eyebrow">Passo 3</div>
             <h2>Estoque atual</h2>
-            <p class="sub">Informe o que você contou no estoque próprio (Ricapet) e no FULL. O sistema desconta automaticamente o consumo dos dias que passarem até a próxima contagem.</p>
+            <p class="sub">Informe a quantidade em unidades (peças ou rolos) que você contou no estoque próprio (Ricapet) e no FULL. O sistema converte para m² quando necessário e desconta automaticamente o consumo dos dias que passarem até a próxima contagem.</p>
           </div>
           <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
@@ -288,6 +288,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -297,8 +298,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-   const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -779,8 +780,22 @@
       const then = new Date(stockUpdatedAt);
       return Math.max(0, (now - then) / 86400000);
     }
-    function effectiveStock(st, avgDaily){
-      const raw = st.proprio + st.full;
+    // Toda contagem de estoque é feita em UNIDADES (peças ou rolos). Para produtos
+    // medidos em m², convertemos usando a área de cada medida específica.
+    function tamAreaM2(tam){
+      if(!tam || tam === '-') return null;
+      const m = String(tam).match(/^(\d+)[xX](\d+)/);
+      if(!m) return null;
+      return (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100);
+    }
+    function stockUnitsToM2(st, produto, tam){
+      const unidades = st.proprio + st.full;
+      if(!HAS_M2[produto]) return unidades;
+      const area = tamAreaM2(tam);
+      return area === null ? 0 : unidades * area;
+    }
+    function effectiveStock(st, avgDaily, produto, tam){
+      const raw = stockUnitsToM2(st, produto, tam);
       if(avgDaily <= 0) return raw;
       return Math.max(0, raw - elapsedDaysSinceCount()*avgDaily);
     }
@@ -791,12 +806,18 @@
       const avgDaily = avgPeriod(src) / 30;
       const st = STATE[produto][cor][tam];
       if(avgDaily <= 0) return 0;
-      const estoqueEfetivo = effectiveStock(st, avgDaily);
+      const estoqueEfetivo = effectiveStock(st, avgDaily, produto, tam);
       return Math.max(0, avgDaily*leadTimeDays - estoqueEfetivo);
     }
     function rollStockTotal(produto, cor){
       let t = 0;
-      ROLL_TAMS.forEach(tam => { if(STATE[produto][cor] && STATE[produto][cor][tam]) t += STATE[produto][cor][tam].proprio + STATE[produto][cor][tam].full; });
+      ROLL_TAMS.forEach(tam => {
+        if(STATE[produto][cor] && STATE[produto][cor][tam]){
+          const st = STATE[produto][cor][tam];
+          const area = tamAreaM2(tam) || 0;
+          t += (st.proprio + st.full) * area;
+        }
+      });
       return t;
     }
     function calcCorTotal(produto, cor){
@@ -814,7 +835,7 @@
         const avgDaily = avgPeriod(src) / 30;
         if(avgDaily <= 0) return;
         const st = STATE[produto][cor][tam];
-        const dias = effectiveStock(st, avgDaily) / avgDaily;
+        const dias = effectiveStock(st, avgDaily, produto, tam) / avgDaily;
         if(dias < minDays) minDays = dias;
       });
       return minDays;
@@ -945,7 +966,6 @@
       wrap.innerHTML = '';
       const cores = Object.keys(NEST[currentProduct]);
       if(cores.length === 0){ wrap.innerHTML = '<div class="empty-note">Sem dados de vendas para este produto no período carregado.</div>'; return; }
-      const unitLabel = UNIT_LABEL[currentProduct];
       cores.forEach(cor => {
         const block = document.createElement('div'); block.className = 'cor-block';
         const head = document.createElement('div'); head.className = 'cor-block-head';
@@ -959,8 +979,8 @@
           const row = document.createElement('div'); row.className = 'medida-row';
           row.innerHTML = `
             <div class="m-name">${tamLabel}${isRoll ? '<span class="tag">matéria-prima</span>' : ''}</div>
-            <div class="m-field"><label>Estoque Ricapet (${unitLabel})</label><input type="number" min="0" step="0.1" value="${st.proprio}" class="in-proprio" /></div>
-            <div class="m-field"><label>Estoque FULL (${unitLabel})</label><input type="number" min="0" step="0.1" value="${st.full}" class="in-full" /></div>
+            <div class="m-field"><label>Estoque Ricapet (un)</label><input type="number" min="0" step="1" value="${st.proprio}" class="in-proprio" /></div>
+            <div class="m-field"><label>Estoque FULL (un)</label><input type="number" min="0" step="1" value="${st.full}" class="in-full" /></div>
           `;
           const proprioInput = row.querySelector('.in-proprio');
           const fullInput = row.querySelector('.in-full');
@@ -1026,7 +1046,7 @@
 
         const detail = document.createElement('div'); detail.className = 'cor-result-detail';
         const tbl = document.createElement('table'); tbl.className = 'detail-tbl';
-        tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado</th><th>Estimado hoje</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
+        tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado (un)</th><th>Estimado hoje (${unitLabel})</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         const today = new Date(); today.setHours(0,0,0,0);
         Object.keys(NEST[currentProduct][cor]).forEach(tam => {
@@ -1035,15 +1055,16 @@
           const src = HAS_M2[currentProduct] ? rec.m2 : rec.units;
           const avgDaily = avgPeriod(src) / 30;
           const st = STATE[currentProduct][cor][tam];
-          const estoqueContado = st.proprio + st.full;
+          const estoqueContadoUn = st.proprio + st.full;
+          const estoqueContadoConvertido = stockUnitsToM2(st, currentProduct, tam);
           const tamLabel = tam === '-' ? 'Estoque geral' : (TAM_LABEL[tam] || tam);
           const tr = document.createElement('tr');
           if(isRoll){
-            tr.innerHTML = `<td>${tamLabel} <span style="color:var(--ink-muted);font-size:11px;">(matéria-prima)</span></td><td>—</td><td>${fmt(estoqueContado,unitLabel==='m²'?1:0)}</td><td>${fmt(estoqueContado,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td style="font-style:italic;color:var(--accent);">abatido no total</td>`;
+            tr.innerHTML = `<td>${tamLabel} <span style="color:var(--ink-muted);font-size:11px;">(matéria-prima)</span></td><td>—</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueContadoConvertido,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td style="font-style:italic;color:var(--accent);">abatido no total</td>`;
           } else if(avgDaily <= 0){
-            tr.innerHTML = `<td>${tamLabel}</td><td>0</td><td>${fmt(estoqueContado,unitLabel==='m²'?1:0)}</td><td>${fmt(estoqueContado,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td>sem consumo</td>`;
+            tr.innerHTML = `<td>${tamLabel}</td><td>0</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueContadoConvertido,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td>sem consumo</td>`;
           } else {
-            const estoqueEfetivo = effectiveStock(st, avgDaily);
+            const estoqueEfetivo = effectiveStock(st, avgDaily, currentProduct, tam);
             const diasRestantes = estoqueEfetivo / avgDaily;
             const esgDate = new Date(today.getTime() + diasRestantes*86400000);
             const compraDate = new Date(esgDate.getTime() - leadTimeDays*86400000);
@@ -1051,7 +1072,7 @@
             let badgeBg = 'var(--success-bg)', badgeText = 'var(--success-text)';
             if(compraDate <= today){ badgeBg='var(--danger-bg)'; badgeText='var(--danger-text)'; }
             else if((compraDate-today)/86400000 <= 7){ badgeBg='var(--warning-bg)'; badgeText='var(--warning-text)'; }
-            tr.innerHTML = `<td>${tamLabel}</td><td>${fmt(avgDaily,2)}</td><td>${fmt(estoqueContado,unitLabel==='m²'?1:0)}</td><td>${fmt(estoqueEfetivo,unitLabel==='m²'?1:0)}</td><td>${fmt(diasRestantes,0)}</td><td><span class="badge" style="background:${badgeBg};color:${badgeText};">${fmtDate(compraDate)}</span></td><td style="font-weight:600;">${fmt(qtd,unitLabel==='m²'?1:0)}</td>`;
+            tr.innerHTML = `<td>${tamLabel}</td><td>${fmt(avgDaily,2)}</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueEfetivo,unitLabel==='m²'?1:0)}</td><td>${fmt(diasRestantes,0)}</td><td><span class="badge" style="background:${badgeBg};color:${badgeText};">${fmtDate(compraDate)}</span></td><td style="font-weight:600;">${fmt(qtd,unitLabel==='m²'?1:0)}</td>`;
           }
           tbody.appendChild(tr);
         });
@@ -1109,6 +1130,7 @@
   }
   init();
 })();
+
 
 
 
