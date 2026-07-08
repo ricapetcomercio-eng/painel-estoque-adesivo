@@ -150,6 +150,9 @@
 
   .cor-result-card { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
   .cor-result-summary { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; }
+  .cor-simple-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
+  .cor-simple-row .r-name { font-size: 14px; font-weight: 600; flex: 1; }
+  .cor-simple-row .r-value { font-family: var(--font-mono); font-size: 17px; font-weight: 700; color: var(--ink); }
   .cor-result-summary .rp-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   .cor-result-summary .r-name { font-size: 14px; font-weight: 600; flex: 1; }
   .cor-result-summary .r-value { font-family: var(--font-mono); font-size: 17px; font-weight: 600; }
@@ -303,6 +306,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -312,8 +316,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-  const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -1035,53 +1039,17 @@
       resWrap.innerHTML = '';
       if(perColor.length === 0){ resWrap.innerHTML = '<div class="empty-note">Sem dados de vendas no período carregado.</div>'; return; }
 
-      perColor.forEach(({cor, m2Bruto, m2Liquido, rollDisponivel, un, minDays, byProduct}) => {
-        const status = colorStatus(minDays);
-        const daysText = minDays === Infinity ? 'sem consumo no período' : (minDays <= 0 ? 'estoque zerado' : `${fmt(minDays,0)} dias de estoque restante`);
-        const card = document.createElement('div'); card.className = 'cor-result-card';
-        if(openCards.has('geral-'+cor)) card.classList.add('open');
+      perColor.forEach(({cor, m2Bruto, m2Liquido, un, byProduct}) => {
         const valueParts = [];
         if(m2Bruto > 0 || M2_PRODUCTS.some(p => byProduct[p] !== undefined)) valueParts.push(`${fmt(m2Liquido,1)} m²`);
         if(un > 0 || UN_PRODUCTS.some(p => byProduct[p] !== undefined)) valueParts.push(`${fmt(un,0)} un`);
-        const summary = document.createElement('div'); summary.className = 'cor-result-summary';
-        summary.innerHTML = `
+        const row = document.createElement('div'); row.className = 'cor-simple-row';
+        row.innerHTML = `
           <span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};"></span>
-          <span class="r-name">${cor}<br><span style="font-size:11px;font-weight:400;color:var(--ink-muted);">${daysText}</span></span>
-          <span class="r-badge" style="background:var(--${status.key}-bg);color:var(--${status.key}-text);">${status.label}</span>
+          <span class="r-name">${cor}</span>
           <span class="r-value">${valueParts.join(' · ')}</span>
-          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         `;
-        summary.onclick = () => {
-          const key = 'geral-'+cor;
-          if(openCards.has(key)) openCards.delete(key); else openCards.add(key);
-          card.classList.toggle('open');
-        };
-        card.appendChild(summary);
-
-        const detail = document.createElement('div'); detail.className = 'cor-result-detail';
-        const tbl = document.createElement('table'); tbl.className = 'detail-tbl';
-        tbl.innerHTML = `<thead><tr><th>Produto</th><th>Unidade</th><th>Dias restantes</th><th>Necessidade</th></tr></thead><tbody></tbody>`;
-        const tbody = tbl.querySelector('tbody');
-        TARGET_PRODUCTS.forEach(p => {
-          if(byProduct[p] === undefined) return;
-          const d = corMinDaysLeft(p, cor);
-          const dLabel = d === Infinity ? '—' : fmt(d,0);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${p}</td><td>${UNIT_LABEL[p]}</td><td>${dLabel}</td><td style="font-weight:600;">${fmt(byProduct[p], UNIT_LABEL[p]==='m²'?1:0)}</td>`;
-          tbody.appendChild(tr);
-        });
-        if(m2Bruto > 0 || rollDisponivel > 0){
-          const trSub = document.createElement('tr');
-          trSub.style.background = 'var(--accent-light)';
-          trSub.innerHTML = `<td colspan="3" style="text-align:right;color:var(--accent-dark);font-weight:600;">− Estoque de rolo disponível (compartilhado)</td><td style="font-weight:700;color:var(--accent-dark);">${fmt(rollDisponivel,1)} m²</td>`;
-          tbody.appendChild(trSub);
-          const trNet = document.createElement('tr');
-          trNet.innerHTML = `<td colspan="3" style="text-align:right;font-weight:700;">= Líquido a comprar (m²)</td><td style="font-weight:700;">${fmt(m2Liquido,1)} m²</td>`;
-          tbody.appendChild(trNet);
-        }
-        detail.appendChild(tbl);
-        card.appendChild(detail);
-        resWrap.appendChild(card);
+        resWrap.appendChild(row);
       });
     }
 
@@ -1091,9 +1059,9 @@
       wrap.innerHTML = `
         <div class="roll-stock-wrap">
           <div class="roll-stock-title">Estoque de matéria-prima (rolos) — compartilhado entre todos os produtos</div>
-          <div class="roll-stock-sub">Um único estoque por cor, usado para abater a necessidade de adesivo de todos os produtos daquela cor (ver "Total Geral" no Passo 4).</div>
+          <div class="roll-stock-sub">Um único estoque por cor, usado para abater a necessidade de adesivo de todos os produtos daquela cor (ver "Total Geral" no Passo 4). Rolo fica só na empresa, não tem FULL.</div>
           <table class="roll-tbl">
-            <thead><tr><th>Cor</th><th>Ricapet 1m×70m</th><th>FULL 1m×70m</th><th>Ricapet 50cm×70m</th><th>FULL 50cm×70m</th></tr></thead>
+            <thead><tr><th>Cor</th><th>Estoque 1m×70m</th><th>Estoque 50cm×70m</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -1106,9 +1074,7 @@
         tr.innerHTML = `
           <td><span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;"></span>${cor}</td>
           <td><input type="number" min="0" step="1" value="${st1.proprio}" class="roll-in" data-cor="${cor}" data-tam="100x7000" data-field="proprio"/></td>
-          <td><input type="number" min="0" step="1" value="${st1.full}" class="roll-in" data-cor="${cor}" data-tam="100x7000" data-field="full"/></td>
           <td><input type="number" min="0" step="1" value="${st2.proprio}" class="roll-in" data-cor="${cor}" data-tam="50x7000" data-field="proprio"/></td>
-          <td><input type="number" min="0" step="1" value="${st2.full}" class="roll-in" data-cor="${cor}" data-tam="50x7000" data-field="full"/></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1296,6 +1262,7 @@
   }
   init();
 })();
+
 
 
 
