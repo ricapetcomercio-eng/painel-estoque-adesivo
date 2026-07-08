@@ -316,8 +316,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-  const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -350,7 +350,7 @@
   }
   const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Caminha 02","Casinha 03","Casinha 09","Casinha 12","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Poste Arranhador","Rampa 6mm"];
   const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8" };
-  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul"];
+  const ROLL_COLORS = ["Azul","Bege","Cinza","Grafite","Marrom","Preto"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
   const ROLL_TAMS = ["100x7000","50x7000"];
   const MESES_PT = {'janeiro':0,'fevereiro':1,'março':2,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
@@ -455,6 +455,25 @@
     const m = String(tamanho).trim().match(/^(\d+)[xX](\d+)/);
     if(!m) return null;
     return (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100);
+  }
+  // ---- ordenação: produtos (A-Z), cores (A-Z) e tamanhos (menor -> maior) ----
+  function sortCores(arr){
+    return arr.slice().sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', {sensitivity:'base'}));
+  }
+  function tamSortKey(tam){
+    if(!tam || tam === '-') return null;
+    const m = String(tam).trim().match(/^(\d+)[xX](\d+)/);
+    if(!m) return null;
+    return parseInt(m[1],10) * parseInt(m[2],10);
+  }
+  function sortTamanhos(arr){
+    return arr.slice().sort((a,b) => {
+      const ka = tamSortKey(a), kb = tamSortKey(b);
+      if(ka === null && kb === null) return String(a).localeCompare(String(b), 'pt-BR', {sensitivity:'base'});
+      if(ka === null) return 1;
+      if(kb === null) return -1;
+      return ka - kb;
+    });
   }
   function monthLabel(anoMesStr){
     const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -1000,10 +1019,11 @@
 
       const colorUnion = new Set();
       TARGET_PRODUCTS.forEach(p => Object.keys(NEST[p]).forEach(c => colorUnion.add(c)));
+      const colorUnionSorted = sortCores(Array.from(colorUnion));
 
       let totalM2 = 0, totalUn = 0, totalRollStock = 0;
       const perColor = [];
-      colorUnion.forEach(cor => {
+      colorUnionSorted.forEach(cor => {
         let m2Bruto = 0, un = 0, minDays = Infinity;
         const byProduct = {};
         TARGET_PRODUCTS.forEach(p => {
@@ -1019,8 +1039,6 @@
         totalM2 += m2Liquido; totalUn += un; totalRollStock += rollDisponivel;
         perColor.push({ cor, m2Bruto, m2Liquido, rollDisponivel, un, minDays, byProduct });
       });
-      perColor.sort((a,b) => (b.m2Liquido + b.un) - (a.m2Liquido + a.un));
-
       const m2ProductsList = M2_PRODUCTS.length ? M2_PRODUCTS.join(' + ') : '—';
       const unProductsList = UN_PRODUCTS.length ? UN_PRODUCTS.join(' + ') : '—';
 
@@ -1095,7 +1113,7 @@
       renderRollStockSection();
       const wrap = document.getElementById('stock-cores');
       wrap.innerHTML = '';
-      const cores = Object.keys(NEST[currentProduct]);
+      const cores = sortCores(Object.keys(NEST[currentProduct]));
       if(cores.length === 0){ wrap.innerHTML = '<div class="empty-note">Sem dados de vendas para este produto no período carregado.</div>'; return; }
       cores.forEach(cor => {
         const block = document.createElement('div'); block.className = 'cor-block';
@@ -1103,7 +1121,7 @@
         head.innerHTML = `<span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};"></span>${cor}`;
         block.appendChild(head);
         const rowsWrap = document.createElement('div'); rowsWrap.className = 'medida-rows';
-        const tamKeys = Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam));
+        const tamKeys = sortTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)));
         if(tamKeys.length === 0){
           rowsWrap.innerHTML = '<div class="medida-row" style="color:var(--ink-muted);font-size:12.5px;">Sem estoque de peças a controlar aqui — este produto usa apenas o estoque de rolo acima.</div>';
         }
@@ -1135,12 +1153,11 @@
       renderResultTabs();
       if(showGeralView){ renderGeralView(); return; }
       const unitLabel = UNIT_LABEL[currentProduct];
-      const cores = Object.keys(NEST[currentProduct]);
+      const cores = sortCores(Object.keys(NEST[currentProduct]));
 
       const heroEl = document.getElementById('hero-total');
       let total = 0;
       const porCor = cores.map(cor => { const v = calcCorTotal(currentProduct, cor); total += v; return {cor, v}; });
-      porCor.sort((a,b) => b.v - a.v);
       heroEl.innerHTML = `
         <div>
           <div class="h-label">Total a comprar de <strong>${currentProduct}</strong> — todas as cores</div>
@@ -1183,7 +1200,7 @@
         tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado (un)</th><th>Estimado hoje (${unitLabel})</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         const today = new Date(); today.setHours(0,0,0,0);
-        Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)).forEach(tam => {
+        sortTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam))).forEach(tam => {
           const rec = NEST[currentProduct][cor][tam];
           const area = areaPerUnitFor(currentProduct, tam);
           const src = area !== null ? rec.units.map(u => u*area) : rec.units;
