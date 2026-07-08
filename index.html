@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Reposição — Ricapet · Thapets</title>
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -110,9 +109,12 @@
   .chart-wrap { position: relative; width: 100%; height: 230px; }
 
   /* ---------- product / color tabs (shared steps 3 & 4) ---------- */
-  .product-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .product-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
   .product-tabs button { font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; gap: 7px; font-weight: 500; }
   .product-tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .product-select { font-size: 13.5px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-weight: 500; min-width: 220px; }
+  .geral-toggle-btn { font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; font-weight: 700; }
+  .geral-toggle-btn.active { background: var(--accent); color: #fff; }
 
   /* ---------- step 3: estoque ---------- */
   .lead-row { display: flex; align-items: center; gap: 10px; background: var(--accent-light); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -121,6 +123,14 @@
   .lead-row .hint { font-size: 11.5px; color: var(--accent-dark); opacity: .8; }
 
   .cor-block { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; overflow: hidden; }
+  .roll-stock-wrap { border: 1px solid var(--accent); border-radius: var(--radius-sm); overflow: hidden; background: var(--accent-light); }
+  .roll-stock-title { padding: 10px 16px 4px; font-size: 13.5px; font-weight: 700; color: var(--accent-dark); }
+  .roll-stock-sub { padding: 0 16px 10px; font-size: 11.5px; color: var(--accent-dark); opacity: .85; }
+  table.roll-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--surface); }
+  table.roll-tbl th { text-align: right; padding: 7px 10px; font-weight: 500; color: var(--ink-muted); background: var(--surface-2); font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
+  table.roll-tbl th:first-child, table.roll-tbl td:first-child { text-align: left; }
+  table.roll-tbl td { padding: 6px 10px; text-align: right; border-top: 1px solid var(--border); }
+  table.roll-tbl input { width: 80px; font-family: var(--font-mono); text-align: right; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--ink); }
   .cor-block-head { display: flex; align-items: center; gap: 9px; padding: 10px 14px; background: var(--surface-2); font-weight: 600; font-size: 13.5px; }
   .cor-block-head .rp-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
   .medida-rows { }
@@ -254,6 +264,7 @@
             <span class="hint">dias entre pedir e receber a matéria-prima</span>
             <span class="hint" id="save-indicator" style="margin-left:auto;font-weight:600;"></span>
           </div>
+          <div id="roll-stock-section" style="margin-bottom:20px;"></div>
           <div class="product-tabs" id="stock-product-tabs"></div>
           <div id="stock-cores"></div>
         </div>
@@ -290,6 +301,8 @@
 
 
 
+
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -299,8 +312,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-  const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -331,15 +344,70 @@
     current[key] = value;
     return jsonbinPut(current);
   }
-  const TARGET_PRODUCTS = ["Arranhador Adesivo","Piso Carpete","Arranhador Adesivo Gato","Arranhador Cara de Gato"];
-  const HAS_M2 = { "Arranhador Adesivo":true, "Piso Carpete":true, "Arranhador Adesivo Gato":false, "Arranhador Cara de Gato":false };
-  const UNIT_LABEL = { "Arranhador Adesivo":"m²", "Piso Carpete":"m²", "Arranhador Adesivo Gato":"un", "Arranhador Cara de Gato":"un" };
-  const PRODUCT_COLOR = { "Arranhador Adesivo":"#2a78d6", "Piso Carpete":"#1baf7a", "Arranhador Adesivo Gato":"#c98500", "Arranhador Cara de Gato":"#e34948" };
+  const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Caminha 02","Casinha 03","Casinha 09","Casinha 12","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Poste Arranhador","Rampa 6mm"];
   const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8" };
+  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
   const ROLL_TAMS = ["100x7000","50x7000"];
-  const ROLL_SIZES_TO_ADD = ["100x7000","50x7000"];
   const MESES_PT = {'janeiro':0,'fevereiro':1,'março':2,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
+
+  // Produtos que NÃO consomem adesivo (peça 100% pronta, sem material de rolo).
+  const NO_ADHESIVE_PRODUCTS = ["Caminha 02","Casinha 03","Casinha 12","Poste Arranhador"];
+
+  // Área fixa de adesivo consumida por unidade vendida (m² por peça), para produtos
+  // que não variam de medida entre as vendas — baseado na tabela informada.
+  // "Arranhador Adesivo" e "Piso Carpete" NÃO entram aqui: eles variam de medida
+  // por venda (a própria coluna TAMANHO dos relatórios já diz qual foi usada).
+  const FIXED_AREA_PER_UNIT = {
+    "Arranhador Adesivo Gato": 0.50 * 0.30,
+    "Arranhador Cara de Gato": 0.50 * 0.40,
+    "Arranhador Parede": 0.46 * 0.16,
+    "Arranhador Rampa": 0.38 * 0.23,
+    "Arranhador Túnel": 0.50 * 0.40,
+    "Brinquedo Interativo": 0.30 * 0.30,
+    "Casinha 09": 0.76 * 0.70,
+    "Degrau": 0.30 * 0.20,
+    "Nicho Grande": 0.75 * 0.30,
+    "Nicho Playground": 1.00 * 0.45,
+    "Playground": 0.70 * 0.35,
+    "Playground 02": 1.10 * 0.70,
+    "Playground 03": 1.10 * 0.70,
+    "Playground 04": 1.10 * 0.70,
+    "Playground 05": 1.10 * 0.70,
+    "Playground 06": 1.10 * 0.70,
+    "Rampa 6mm": 0.35 * 0.38
+  };
+
+  // Gera uma cor distinta para cada produto (evita ter que cadastrar cor manualmente para cada um).
+  const PRODUCT_COLOR = {};
+  TARGET_PRODUCTS.forEach((p, i) => {
+    const hue = Math.round((360 * i / TARGET_PRODUCTS.length));
+    PRODUCT_COLOR[p] = `hsl(${hue}, 62%, 45%)`;
+  });
+
+  function tamAreaM2(tam){
+    if(!tam || tam === '-') return null;
+    const m = String(tam).match(/^(\d+)[xX](\d+)/);
+    if(!m) return null;
+    return (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100);
+  }
+  // Área (m²) consumida por unidade de um produto/medida específicos. Unifica os
+  // dois casos: produtos com área fixa por peça (tabela) e produtos que variam de
+  // medida por venda (Arranhador Adesivo, Piso Carpete). null = não consome adesivo.
+  function areaPerUnitFor(produto, tam){
+    if(NO_ADHESIVE_PRODUCTS.includes(produto)) return null;
+    if(FIXED_AREA_PER_UNIT[produto] !== undefined) return FIXED_AREA_PER_UNIT[produto];
+    return tamAreaM2(tam);
+  }
+  // Um produto é "medido em m²" se qualquer uma de suas combinações cor/medida
+  // consumir área — seja por área fixa cadastrada, seja por medida variável de venda.
+  function hasM2(produto, nest){
+    if(NO_ADHESIVE_PRODUCTS.includes(produto)) return false;
+    if(FIXED_AREA_PER_UNIT[produto] !== undefined) return true;
+    const cores = nest[produto];
+    if(!cores) return false;
+    return Object.values(cores).some(tamObj => Object.keys(tamObj).some(tam => tamAreaM2(tam) !== null));
+  }
 
   let currentData = null;
   let activeFlushFn = null;
@@ -479,22 +547,13 @@
         revMonthly[r.produto][mi] += r.totalBRL;
         const area = parseAreaM2(r.tamanho);
         const areaTotal = area !== null ? area * r.totalUnidades : 0;
-        if(HAS_M2[r.produto]) m2Monthly[r.produto][mi] += areaTotal;
+        m2Monthly[r.produto][mi] += areaTotal;
         const cor = r.cor || 'Sem cor';
         const tam = r.tamanho || '-';
         if(!nest[r.produto][cor]) nest[r.produto][cor] = {};
         if(!nest[r.produto][cor][tam]) nest[r.produto][cor][tam] = { units: months.map(()=>0), m2: months.map(()=>0) };
         nest[r.produto][cor][tam].units[mi] += r.totalUnidades;
         nest[r.produto][cor][tam].m2[mi] += areaTotal;
-      });
-
-      TARGET_PRODUCTS.forEach(p => {
-        if(!HAS_M2[p]) return;
-        Object.keys(nest[p]).forEach(cor => {
-          ROLL_SIZES_TO_ADD.forEach(tam => {
-            if(!nest[p][cor][tam]) nest[p][cor][tam] = { units: months.map(()=>0), m2: months.map(()=>0) };
-          });
-        });
       });
 
       const monthLabels = months.map(monthLabel);
@@ -635,6 +694,37 @@
     const M2 = data.m2Monthly;
     const REVENUE = data.revMonthly;
     const NEST = data.nest;
+    // Garante que todo produto da lista tenha ao menos uma entrada vazia,
+    // mesmo que ainda não tenha aparecido em nenhum relatório processado.
+    TARGET_PRODUCTS.forEach(p => {
+      if(!NEST[p]) NEST[p] = {};
+      if(!UNITS[p]) UNITS[p] = MONTHS.map(()=>0);
+      if(!M2[p]) M2[p] = MONTHS.map(()=>0);
+      if(!REVENUE[p]) REVENUE[p] = MONTHS.map(()=>0);
+    });
+    const HAS_M2 = {};
+    TARGET_PRODUCTS.forEach(p => { HAS_M2[p] = hasM2(p, NEST); });
+    const UNIT_LABEL = {};
+    TARGET_PRODUCTS.forEach(p => { UNIT_LABEL[p] = HAS_M2[p] ? 'm²' : 'un'; });
+
+    // Recalcula o consumo em m² mês a mês usando a área por unidade (fixa ou por
+    // medida de venda), em vez de confiar apenas no que foi salvo no upload —
+    // isso garante que os produtos de área fixa (tabela) entrem no cálculo mesmo
+    // que o relatório original não tivesse medida na coluna TAMANHO.
+    TARGET_PRODUCTS.forEach(p => {
+      if(!HAS_M2[p]) return;
+      const recomputed = MONTHS.map(()=>0);
+      Object.keys(NEST[p]).forEach(cor => {
+        Object.keys(NEST[p][cor]).forEach(tam => {
+          if(ROLL_TAMS.includes(tam)) return; // resíduo de versões antigas — ignorar
+          const area = areaPerUnitFor(p, tam);
+          if(area === null) return;
+          const rec = NEST[p][cor][tam];
+          rec.units.forEach((u, mi) => { recomputed[mi] += u * area; });
+        });
+      });
+      M2[p] = recomputed;
+    });
 
     // ---- KPIs ----
     const totalUnits = sum(TARGET_PRODUCTS.map(p => sum(UNITS[p]||[0])));
@@ -734,11 +824,25 @@
       Object.keys(NEST[p]).forEach(cor => {
         STATE[p][cor] = {};
         Object.keys(NEST[p][cor]).forEach(tam => {
+          if(ROLL_TAMS.includes(tam)) return; // resíduo de versões antigas — rolo agora é estado à parte
           const saved = savedStockMap[p] && savedStockMap[p][cor] && savedStockMap[p][cor][tam];
           STATE[p][cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0 };
         });
       });
     });
+
+    // Estoque de matéria-prima (rolos), um único pool por cor, compartilhado por
+    // todos os produtos que consomem adesivo — não pertence a nenhum produto específico.
+    const savedRollsMap = (savedStock && savedStock.rolls) || {};
+    const ROLL_STATE = {};
+    ROLL_COLORS.forEach(cor => {
+      ROLL_STATE[cor] = {};
+      ROLL_TAMS.forEach(tam => {
+        const saved = savedRollsMap[cor] && savedRollsMap[cor][tam];
+        ROLL_STATE[cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0 };
+      });
+    });
+
     let leadTimeDays = (savedStock && typeof savedStock.leadTimeDays === 'number') ? savedStock.leadTimeDays : 15;
     let stockUpdatedAt = (savedStock && savedStock.updatedAt) || null;
     renderStockUpdated(stockUpdatedAt);
@@ -752,7 +856,7 @@
         return;
       }
       setSaveIndicator('saving');
-      const payload = { leadTimeDays, stock: STATE, updatedAt: new Date().toISOString() };
+      const payload = { leadTimeDays, stock: STATE, rolls: ROLL_STATE, updatedAt: new Date().toISOString() };
       const ok = await jsonbinUpdatePart('estoque', payload);
       if(ok){
         stockUpdatedAt = payload.updatedAt;
@@ -781,19 +885,12 @@
       const then = new Date(stockUpdatedAt);
       return Math.max(0, (now - then) / 86400000);
     }
-    // Toda contagem de estoque é feita em UNIDADES (peças ou rolos). Para produtos
-    // medidos em m², convertemos usando a área de cada medida específica.
-    function tamAreaM2(tam){
-      if(!tam || tam === '-') return null;
-      const m = String(tam).match(/^(\d+)[xX](\d+)/);
-      if(!m) return null;
-      return (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100);
-    }
+    // Toda contagem de estoque é feita em UNIDADES (peças ou rolos). Convertemos
+    // para m² usando a área por unidade daquele produto/medida quando aplicável.
     function stockUnitsToM2(st, produto, tam){
       const unidades = st.proprio + st.full;
-      if(!HAS_M2[produto]) return unidades;
-      const area = tamAreaM2(tam);
-      return area === null ? 0 : unidades * area;
+      const area = areaPerUnitFor(produto, tam);
+      return area === null ? unidades : unidades * area;
     }
     function effectiveStock(st, avgDaily, produto, tam){
       const raw = stockUnitsToM2(st, produto, tam);
@@ -803,36 +900,39 @@
 
     function calcQtd(produto, cor, tam){
       const rec = NEST[produto][cor][tam];
-      const src = HAS_M2[produto] ? rec.m2 : rec.units;
+      const area = areaPerUnitFor(produto, tam);
+      const src = area !== null ? rec.units.map(u => u*area) : rec.units;
       const avgDaily = avgPeriod(src) / 30;
       const st = STATE[produto][cor][tam];
       if(avgDaily <= 0) return 0;
       const estoqueEfetivo = effectiveStock(st, avgDaily, produto, tam);
       return Math.max(0, avgDaily*leadTimeDays - estoqueEfetivo);
     }
-    function rollStockTotal(produto, cor){
+    // Total de matéria-prima (m²) disponível em estoque para uma cor — compartilhado
+    // entre todos os produtos que usam adesivo dessa cor.
+    function rollStockSharedTotal(cor){
       let t = 0;
       ROLL_TAMS.forEach(tam => {
-        if(STATE[produto][cor] && STATE[produto][cor][tam]){
-          const st = STATE[produto][cor][tam];
-          const area = tamAreaM2(tam) || 0;
-          t += (st.proprio + st.full) * area;
-        }
+        const st = ROLL_STATE[cor][tam];
+        const area = tamAreaM2(tam) || 0;
+        t += (st.proprio + st.full) * area;
       });
       return t;
     }
+    // Necessidade bruta de um produto/cor (m² ou un), já descontando o estoque de
+    // peças prontas daquele produto — SEM descontar o rolo (que é somado uma única
+    // vez no Total Geral, para não contar o mesmo rolo mais de uma vez).
     function calcCorTotal(produto, cor){
       let t = 0;
-      Object.keys(NEST[produto][cor]).forEach(tam => { if(!ROLL_TAMS.includes(tam)) t += calcQtd(produto, cor, tam); });
-      t -= rollStockTotal(produto, cor);
+      Object.keys(NEST[produto][cor]).forEach(tam => { t += calcQtd(produto, cor, tam); });
       return Math.max(0, t);
     }
     function corMinDaysLeft(produto, cor){
       let minDays = Infinity;
       Object.keys(NEST[produto][cor]).forEach(tam => {
-        if(ROLL_TAMS.includes(tam)) return;
         const rec = NEST[produto][cor][tam];
-        const src = HAS_M2[produto] ? rec.m2 : rec.units;
+        const area = areaPerUnitFor(produto, tam);
+        const src = area !== null ? rec.units.map(u => u*area) : rec.units;
         const avgDaily = avgPeriod(src) / 30;
         if(avgDaily <= 0) return;
         const st = STATE[produto][cor][tam];
@@ -844,31 +944,42 @@
 
     function renderProductTabsInto(container){
       container.innerHTML = '';
+      const select = document.createElement('select');
+      select.className = 'product-select';
       TARGET_PRODUCTS.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = p === currentProduct ? 'active' : '';
-        btn.innerHTML = `<span class="sw" style="background:${p===currentProduct?'#fff':PRODUCT_COLOR[p]};"></span>${p}`;
-        btn.onclick = () => { currentProduct = p; renderStockSection(); renderResultSection(); };
-        container.appendChild(btn);
+        const opt = document.createElement('option');
+        opt.value = p; opt.textContent = p;
+        if(p === currentProduct) opt.selected = true;
+        select.appendChild(opt);
       });
+      select.onchange = () => { currentProduct = select.value; renderStockSection(); renderResultSection(); };
+      container.appendChild(select);
     }
 
     function renderResultTabs(){
       const container = document.getElementById('result-product-tabs');
       container.innerHTML = '';
       const geralBtn = document.createElement('button');
-      geralBtn.className = showGeralView ? 'active' : '';
-      geralBtn.style.fontWeight = '700';
-      geralBtn.innerHTML = `<span class="sw" style="background:${showGeralView?'#fff':'var(--accent)'};"></span>Total Geral (todos os produtos)`;
+      geralBtn.className = 'geral-toggle-btn' + (showGeralView ? ' active' : '');
+      geralBtn.innerHTML = `Σ Total Geral (todos os produtos)`;
       geralBtn.onclick = () => { showGeralView = true; renderResultSection(); };
       container.appendChild(geralBtn);
+
+      const select = document.createElement('select');
+      select.className = 'product-select';
+      const placeholderOpt = document.createElement('option');
+      placeholderOpt.value = ''; placeholderOpt.textContent = 'Ou escolha um produto específico...';
+      placeholderOpt.disabled = true;
+      if(showGeralView) placeholderOpt.selected = true;
+      select.appendChild(placeholderOpt);
       TARGET_PRODUCTS.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = (!showGeralView && p === currentProduct) ? 'active' : '';
-        btn.innerHTML = `<span class="sw" style="background:${(!showGeralView && p===currentProduct)?'#fff':PRODUCT_COLOR[p]};"></span>${p}`;
-        btn.onclick = () => { showGeralView = false; currentProduct = p; renderResultSection(); };
-        container.appendChild(btn);
+        const opt = document.createElement('option');
+        opt.value = p; opt.textContent = p;
+        if(!showGeralView && p === currentProduct) opt.selected = true;
+        select.appendChild(opt);
       });
+      select.onchange = () => { showGeralView = false; currentProduct = select.value; renderResultSection(); };
+      container.appendChild(select);
     }
 
     function colorStatus(minDays){
@@ -886,32 +997,37 @@
       const colorUnion = new Set();
       TARGET_PRODUCTS.forEach(p => Object.keys(NEST[p]).forEach(c => colorUnion.add(c)));
 
-      let totalM2 = 0, totalUn = 0;
+      let totalM2 = 0, totalUn = 0, totalRollStock = 0;
       const perColor = [];
       colorUnion.forEach(cor => {
-        let m2 = 0, un = 0, minDays = Infinity;
+        let m2Bruto = 0, un = 0, minDays = Infinity;
         const byProduct = {};
         TARGET_PRODUCTS.forEach(p => {
           if(!NEST[p][cor]) return;
           const v = calcCorTotal(p, cor);
           byProduct[p] = v;
-          if(HAS_M2[p]) m2 += v; else un += v;
+          if(HAS_M2[p]) m2Bruto += v; else un += v;
           const d = corMinDaysLeft(p, cor);
           if(d < minDays) minDays = d;
         });
-        totalM2 += m2; totalUn += un;
-        perColor.push({ cor, m2, un, minDays, byProduct });
+        const rollDisponivel = ROLL_COLORS.includes(cor) ? rollStockSharedTotal(cor) : 0;
+        const m2Liquido = Math.max(0, m2Bruto - rollDisponivel);
+        totalM2 += m2Liquido; totalUn += un; totalRollStock += rollDisponivel;
+        perColor.push({ cor, m2Bruto, m2Liquido, rollDisponivel, un, minDays, byProduct });
       });
-      perColor.sort((a,b) => (b.m2 + b.un) - (a.m2 + a.un));
+      perColor.sort((a,b) => (b.m2Liquido + b.un) - (a.m2Liquido + a.un));
+
+      const m2ProductsList = M2_PRODUCTS.length ? M2_PRODUCTS.join(' + ') : '—';
+      const unProductsList = UN_PRODUCTS.length ? UN_PRODUCTS.join(' + ') : '—';
 
       heroEl.innerHTML = `
         <div>
           <div class="h-label">Total geral a comprar — <strong>todos os produtos</strong>, por cor</div>
-          <div class="h-sub">Período: ${MONTHS[periodStart]}–${MONTHS[periodEnd]} · lead time: ${leadTimeDays} dias · estoque contado há ${fmt(elapsedDaysSinceCount(),1)} dia(s) · rolos já descontados</div>
+          <div class="h-sub">Período: ${MONTHS[periodStart]}–${MONTHS[periodEnd]} · lead time: ${leadTimeDays} dias · estoque contado há ${fmt(elapsedDaysSinceCount(),1)} dia(s) · já descontando ${fmt(totalRollStock,1)} m² de rolo em estoque</div>
         </div>
         <div style="display:flex;gap:22px;flex-wrap:wrap;">
-          <div class="h-value">${fmt(totalM2,1)} <span style="font-size:14px;font-weight:500;opacity:.8;">m²<br><span style="font-size:10.5px;">Adesivo + Carpete</span></span></div>
-          <div class="h-value">${fmt(totalUn,0)} <span style="font-size:14px;font-weight:500;opacity:.8;">un<br><span style="font-size:10.5px;">Gato + Cara de Gato</span></span></div>
+          <div class="h-value" title="${m2ProductsList}">${fmt(totalM2,1)} <span style="font-size:14px;font-weight:500;opacity:.8;">m²<br><span style="font-size:10.5px;">produtos por m², já líquido do rolo</span></span></div>
+          <div class="h-value" title="${unProductsList}">${fmt(totalUn,0)} <span style="font-size:14px;font-weight:500;opacity:.8;">un<br><span style="font-size:10.5px;">produtos por unidade</span></span></div>
         </div>
       `;
 
@@ -919,13 +1035,13 @@
       resWrap.innerHTML = '';
       if(perColor.length === 0){ resWrap.innerHTML = '<div class="empty-note">Sem dados de vendas no período carregado.</div>'; return; }
 
-      perColor.forEach(({cor, m2, un, minDays, byProduct}) => {
+      perColor.forEach(({cor, m2Bruto, m2Liquido, rollDisponivel, un, minDays, byProduct}) => {
         const status = colorStatus(minDays);
         const daysText = minDays === Infinity ? 'sem consumo no período' : (minDays <= 0 ? 'estoque zerado' : `${fmt(minDays,0)} dias de estoque restante`);
         const card = document.createElement('div'); card.className = 'cor-result-card';
         if(openCards.has('geral-'+cor)) card.classList.add('open');
         const valueParts = [];
-        if(m2 > 0 || M2_PRODUCTS.some(p => byProduct[p] !== undefined)) valueParts.push(`${fmt(m2,1)} m²`);
+        if(m2Bruto > 0 || M2_PRODUCTS.some(p => byProduct[p] !== undefined)) valueParts.push(`${fmt(m2Liquido,1)} m²`);
         if(un > 0 || UN_PRODUCTS.some(p => byProduct[p] !== undefined)) valueParts.push(`${fmt(un,0)} un`);
         const summary = document.createElement('div'); summary.className = 'cor-result-summary';
         summary.innerHTML = `
@@ -944,7 +1060,7 @@
 
         const detail = document.createElement('div'); detail.className = 'cor-result-detail';
         const tbl = document.createElement('table'); tbl.className = 'detail-tbl';
-        tbl.innerHTML = `<thead><tr><th>Produto</th><th>Unidade</th><th>Dias restantes</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
+        tbl.innerHTML = `<thead><tr><th>Produto</th><th>Unidade</th><th>Dias restantes</th><th>Necessidade</th></tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         TARGET_PRODUCTS.forEach(p => {
           if(byProduct[p] === undefined) return;
@@ -954,6 +1070,15 @@
           tr.innerHTML = `<td>${p}</td><td>${UNIT_LABEL[p]}</td><td>${dLabel}</td><td style="font-weight:600;">${fmt(byProduct[p], UNIT_LABEL[p]==='m²'?1:0)}</td>`;
           tbody.appendChild(tr);
         });
+        if(m2Bruto > 0 || rollDisponivel > 0){
+          const trSub = document.createElement('tr');
+          trSub.style.background = 'var(--accent-light)';
+          trSub.innerHTML = `<td colspan="3" style="text-align:right;color:var(--accent-dark);font-weight:600;">− Estoque de rolo disponível (compartilhado)</td><td style="font-weight:700;color:var(--accent-dark);">${fmt(rollDisponivel,1)} m²</td>`;
+          tbody.appendChild(trSub);
+          const trNet = document.createElement('tr');
+          trNet.innerHTML = `<td colspan="3" style="text-align:right;font-weight:700;">= Líquido a comprar (m²)</td><td style="font-weight:700;">${fmt(m2Liquido,1)} m²</td>`;
+          tbody.appendChild(trNet);
+        }
         detail.appendChild(tbl);
         card.appendChild(detail);
         resWrap.appendChild(card);
@@ -961,8 +1086,47 @@
     }
 
     // ---- passo 3: estoque ----
+    function renderRollStockSection(){
+      const wrap = document.getElementById('roll-stock-section');
+      wrap.innerHTML = `
+        <div class="roll-stock-wrap">
+          <div class="roll-stock-title">Estoque de matéria-prima (rolos) — compartilhado entre todos os produtos</div>
+          <div class="roll-stock-sub">Um único estoque por cor, usado para abater a necessidade de adesivo de todos os produtos daquela cor (ver "Total Geral" no Passo 4).</div>
+          <table class="roll-tbl">
+            <thead><tr><th>Cor</th><th>Ricapet 1m×70m</th><th>FULL 1m×70m</th><th>Ricapet 50cm×70m</th><th>FULL 50cm×70m</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      `;
+      const tbody = wrap.querySelector('tbody');
+      ROLL_COLORS.forEach(cor => {
+        const tr = document.createElement('tr');
+        const st1 = ROLL_STATE[cor]['100x7000'];
+        const st2 = ROLL_STATE[cor]['50x7000'];
+        tr.innerHTML = `
+          <td><span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;"></span>${cor}</td>
+          <td><input type="number" min="0" step="1" value="${st1.proprio}" class="roll-in" data-cor="${cor}" data-tam="100x7000" data-field="proprio"/></td>
+          <td><input type="number" min="0" step="1" value="${st1.full}" class="roll-in" data-cor="${cor}" data-tam="100x7000" data-field="full"/></td>
+          <td><input type="number" min="0" step="1" value="${st2.proprio}" class="roll-in" data-cor="${cor}" data-tam="50x7000" data-field="proprio"/></td>
+          <td><input type="number" min="0" step="1" value="${st2.full}" class="roll-in" data-cor="${cor}" data-tam="50x7000" data-field="full"/></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      wrap.querySelectorAll('.roll-in').forEach(input => {
+        const update = () => {
+          const cor = input.dataset.cor, tam = input.dataset.tam, field = input.dataset.field;
+          ROLL_STATE[cor][tam][field] = parseFloat(input.value) || 0;
+          renderResultSection();
+          saveStockData();
+        };
+        input.addEventListener('input', update);
+        input.addEventListener('blur', flushStockSave);
+      });
+    }
+
     function renderStockSection(){
       renderProductTabsInto(document.getElementById('stock-product-tabs'));
+      renderRollStockSection();
       const wrap = document.getElementById('stock-cores');
       wrap.innerHTML = '';
       const cores = Object.keys(NEST[currentProduct]);
@@ -973,13 +1137,16 @@
         head.innerHTML = `<span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};"></span>${cor}`;
         block.appendChild(head);
         const rowsWrap = document.createElement('div'); rowsWrap.className = 'medida-rows';
-        Object.keys(NEST[currentProduct][cor]).forEach(tam => {
-          const isRoll = ROLL_TAMS.includes(tam);
+        const tamKeys = Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam));
+        if(tamKeys.length === 0){
+          rowsWrap.innerHTML = '<div class="medida-row" style="color:var(--ink-muted);font-size:12.5px;">Sem estoque de peças a controlar aqui — este produto usa apenas o estoque de rolo acima.</div>';
+        }
+        tamKeys.forEach(tam => {
           const st = STATE[currentProduct][cor][tam];
-          const tamLabel = tam === '-' ? 'Estoque geral' : (TAM_LABEL[tam] || tam);
+          const tamLabel = tam === '-' ? 'Estoque geral' : tam;
           const row = document.createElement('div'); row.className = 'medida-row';
           row.innerHTML = `
-            <div class="m-name">${tamLabel}${isRoll ? '<span class="tag">matéria-prima</span>' : ''}</div>
+            <div class="m-name">${tamLabel}</div>
             <div class="m-field"><label>Estoque Ricapet (un)</label><input type="number" min="0" step="1" value="${st.proprio}" class="in-proprio" /></div>
             <div class="m-field"><label>Estoque FULL (un)</label><input type="number" min="0" step="1" value="${st.full}" class="in-full" /></div>
           `;
@@ -1011,7 +1178,7 @@
       heroEl.innerHTML = `
         <div>
           <div class="h-label">Total a comprar de <strong>${currentProduct}</strong> — todas as cores</div>
-          <div class="h-sub">Período: ${MONTHS[periodStart]}–${MONTHS[periodEnd]} · lead time: ${leadTimeDays} dias · estoque contado há ${fmt(elapsedDaysSinceCount(),1)} dia(s) · rolos já descontados</div>
+          <div class="h-sub">Período: ${MONTHS[periodStart]}–${MONTHS[periodEnd]} · lead time: ${leadTimeDays} dias · estoque contado há ${fmt(elapsedDaysSinceCount(),1)} dia(s) · ainda não desconta o estoque de rolo (compartilhado) — veja "Total Geral" para o número líquido</div>
         </div>
         <div class="h-value">${fmt(total, unitLabel==='m²'?1:0)} <span style="font-size:16px;font-weight:500;opacity:.8;">${unitLabel}</span></div>
       `;
@@ -1050,19 +1217,17 @@
         tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado (un)</th><th>Estimado hoje (${unitLabel})</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         const today = new Date(); today.setHours(0,0,0,0);
-        Object.keys(NEST[currentProduct][cor]).forEach(tam => {
-          const isRoll = ROLL_TAMS.includes(tam);
+        Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)).forEach(tam => {
           const rec = NEST[currentProduct][cor][tam];
-          const src = HAS_M2[currentProduct] ? rec.m2 : rec.units;
+          const area = areaPerUnitFor(currentProduct, tam);
+          const src = area !== null ? rec.units.map(u => u*area) : rec.units;
           const avgDaily = avgPeriod(src) / 30;
           const st = STATE[currentProduct][cor][tam];
           const estoqueContadoUn = st.proprio + st.full;
           const estoqueContadoConvertido = stockUnitsToM2(st, currentProduct, tam);
-          const tamLabel = tam === '-' ? 'Estoque geral' : (TAM_LABEL[tam] || tam);
+          const tamLabel = tam === '-' ? 'Estoque geral' : tam;
           const tr = document.createElement('tr');
-          if(isRoll){
-            tr.innerHTML = `<td>${tamLabel} <span style="color:var(--ink-muted);font-size:11px;">(matéria-prima)</span></td><td>—</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueContadoConvertido,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td style="font-style:italic;color:var(--accent);">abatido no total</td>`;
-          } else if(avgDaily <= 0){
+          if(avgDaily <= 0){
             tr.innerHTML = `<td>${tamLabel}</td><td>0</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueContadoConvertido,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td>sem consumo</td>`;
           } else {
             const estoqueEfetivo = effectiveStock(st, avgDaily, currentProduct, tam);
@@ -1131,6 +1296,8 @@
   }
   init();
 })();
+
+
 
 
 
