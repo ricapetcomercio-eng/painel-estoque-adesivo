@@ -79,6 +79,9 @@
     padding: 12px 8px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--ink);
   }
   .input-group input:focus { outline: none; border-color: var(--accent); background: var(--accent-light); }
+  .input-group.solo label { font-size: 12.5px; text-align: center; }
+  .input-group.solo input { font-size: 28px; padding: 16px 10px; font-weight: 700; }
+  .medida-card:has(.solo) { padding: 16px 18px; }
 
   section.card {
     background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px;
@@ -147,6 +150,9 @@
 <script>
 
 
+
+
+
 (function(){
   // ===================================================================
   // Mesma configuração de armazenamento do painel principal (jsonbin.io)
@@ -191,7 +197,19 @@
 ;
   const TARGET_PRODUCTS_RAW = Object.keys(CATALOG).sort((a,b) => a.localeCompare(b, 'pt-BR'));
   const ROLL_PSEUDO_PRODUCT = "Rolo de Matéria-Prima (Adesivo)";
-  const TARGET_PRODUCTS = [ROLL_PSEUDO_PRODUCT, ...TARGET_PRODUCTS_RAW];
+
+  // Nome de exibição: produtos "Jel Plast" mostram a marca entre parênteses no final.
+  function displayNameFor(produto){
+    if(produto.indexOf('Jel Plast') === -1) return produto;
+    const semMarca = produto.replace(/\s*Jel Plast\s*/g, ' ').replace(/\s+/g,' ').trim();
+    return semMarca + ' (Jel Plast)';
+  }
+
+  // Ordem final: produtos normais (A-Z) → Rolo de matéria-prima → produtos Jel Plast (A-Z, por nome de exibição).
+  const NAO_JEL_PLAST = TARGET_PRODUCTS_RAW.filter(p => p.indexOf('Jel Plast') === -1);
+  const JEL_PLAST = TARGET_PRODUCTS_RAW.filter(p => p.indexOf('Jel Plast') !== -1)
+    .sort((a,b) => displayNameFor(a).localeCompare(displayNameFor(b), 'pt-BR'));
+  const TARGET_PRODUCTS = [...NAO_JEL_PLAST, ROLL_PSEUDO_PRODUCT, ...JEL_PLAST];
   const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8","Chumbo":"#5a5f66","Branco":"#f2f2f0","Vermelho":"#c0392b","Amarelo":"#e0b400","Rosa":"#e78ea6","Verde":"#3a7d3a","Caramelo":"#b5651d","Roxo":"#6a3d9a","Lilas":"#b19cd9","Violeta":"#7f4fa3","Sisal":"#c2a06b" };
   const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul","Chumbo"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
@@ -235,7 +253,7 @@
     sel.innerHTML = '';
     TARGET_PRODUCTS.forEach(p => {
       const opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
+      opt.value = p; opt.textContent = displayNameFor(p);
       if(p === currentProduct) opt.selected = true;
       sel.appendChild(opt);
     });
@@ -274,7 +292,7 @@
         card.innerHTML = `
           <div class="m-title">${tamLabel}</div>
           <div class="input-row">
-            <div class="input-group">
+            <div class="input-group solo">
               <label>Estoque (un)</label>
               <input type="number" inputmode="numeric" min="0" step="1" value="${st.proprio}" class="in-proprio" />
             </div>
@@ -301,22 +319,15 @@
       card.innerHTML = `
         <div class="m-title">${tamLabel}</div>
         <div class="input-row">
-          <div class="input-group">
-            <label>Ricapet (un)</label>
+          <div class="input-group solo">
+            <label>Estoque Ricapet (un)</label>
             <input type="number" inputmode="numeric" min="0" step="1" value="${st.proprio}" class="in-proprio" />
-          </div>
-          <div class="input-group">
-            <label>FULL (un)</label>
-            <input type="number" inputmode="numeric" min="0" step="1" value="${st.full}" class="in-full" />
           </div>
         </div>
       `;
       const proprioInput = card.querySelector('.in-proprio');
-      const fullInput = card.querySelector('.in-full');
       proprioInput.addEventListener('input', () => { st.proprio = parseFloat(proprioInput.value) || 0; saveStockDebounced(); });
-      fullInput.addEventListener('input', () => { st.full = parseFloat(fullInput.value) || 0; saveStockDebounced(); });
       proprioInput.addEventListener('blur', flushSave);
-      fullInput.addEventListener('blur', flushSave);
       wrap.appendChild(card);
     });
   }
@@ -437,6 +448,9 @@
 
   init();
 })();
+
+
+
 
 
 </script>
