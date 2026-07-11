@@ -25,7 +25,22 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); }
-  body { padding-bottom: 40px; }
+  body { padding-bottom: 96px; }
+  .gravar-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--surface); border-top: 1.5px solid var(--border);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 14px rgba(0,0,0,.06);
+  }
+  .gravar-btn {
+    width: 100%; font-family: var(--font-display); font-size: 15.5px; font-weight: 700;
+    padding: 14px; border: none; border-radius: 12px; background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .gravar-btn:active { background: var(--accent-dark); }
+  .gravar-btn:disabled { background: var(--border); color: var(--ink-muted); }
+  .gravar-status { text-align: center; font-size: 12px; margin-top: 8px; min-height: 15px; }
+  .gravar-status.ok { color: var(--success-solid); font-weight: 600; }
+  .gravar-status.err { color: var(--danger-solid); font-weight: 600; }
 
   header.topbar { position: sticky; top: 0; z-index: 10; background: var(--accent-dark); color: #fff; padding: 16px 18px 14px; }
   header.topbar h1 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin: 0 0 2px; }
@@ -120,21 +135,18 @@
     <div id="medida-list"></div>
   </section>
 
-  <section class="card">
-    <button class="roll-toggle" id="roll-toggle">
-      <span>Matéria-prima (rolos)</span>
-      <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="roll-body" id="roll-body">
-      <p class="sub" style="margin-top:10px;">Estoque de rolos por cor — compartilhado entre todos os produtos que usam adesivo.</p>
-      <div id="roll-cards"></div>
-    </div>
-  </section>
-
   <footer class="foot">Os dados são salvos automaticamente e aparecem no painel de gestão em tempo real.</footer>
 </main>
 
+<div class="gravar-bar">
+  <button id="gravar-btn" class="gravar-btn">Gravar no Google Sheets</button>
+  <div id="gravar-status" class="gravar-status"></div>
+</div>
+
+
 <script>
+
+
 (function(){
   // ===================================================================
   // Mesma configuração de armazenamento do painel principal (jsonbin.io)
@@ -172,9 +184,16 @@
     return jsonbinPut(current);
   }
 
-  const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Caminha 02","Casinha 03","Casinha 09","Casinha 12","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Poste Arranhador","Rampa 6mm"];
-  const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8" };
-  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul"];
+  // Catálogo completo de produtos/cores/tamanhos da empresa (planilha Produtos_Estoque.xlsx).
+  // Este app cobre TODO o estoque — diferente do painel de gestão, que só acompanha
+  // os produtos com dados de venda processados.
+  const CATALOG = {"Alimentador Automático":{"Branco":["-"]},"Areia de Mandioca":{"Bege":["-"]},"Arranhador Adesivo":{"Preto":["100x50","120x50","200x50","48X30","50x30","70x50"],"Grafite":["100x50","120x50","200x50","50x30","70x50"],"Cinza":["100x50","120x50","200x50","50x30","70x50"],"Marrom":["100x50","120x50","200x50","50x30","70x50"],"Bege":["100x50","120x50","200x50","50x30","70x50"],"Azul":["100x50","120x50","200x50","50x30","70x50"],"Chumbo":["50x30"]},"Arranhador Adesivo Gato":{"Preto":["-"],"Bege":["-"],"Azul":["-"],"Cinza":["-"],"Grafite":["-"],"Marrom":["-"]},"Arranhador Cara de Gato":{"Preto":["-"],"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Arranhador de Braço":{"Bege":["G","M","P"],"Cinza":["G","M","P"],"Azul":["G","M","P"]},"Arranhador de Braço Simples":{"Azul":["G","M","P"],"Cinza":["G","M","P"],"Bege":["G","M","P"]},"Arranhador de Madeira":{"60cm":["G"],"Azul":["G"],"Cinza":["G"],"Bege":["G"]},"Arranhador Parede":{"Sisal":["-"],"Bege":["-"],"Cinza":["-"],"Preto":["-"],"Marrom":["-"],"Grafite":["-"],"Azul":["-"]},"Arranhador Rampa":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Arranhador Túnel":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Banheiro Inteligente":{"Cinza":["-"]},"Bolsa Transporte Aves Jel Plast":{"Azul":["-"],"Vermelho":["-"]},"Brinquedo Interativo":{"Preto":["-"],"Grafite":["-"],"Azul":["-"],"Bege":["-"],"Marrom":["-"],"Cinza":["-"]},"Caixa Sanitária Jel Plast":{"Preto":["-"],"Amarelo":["-"],"Azul":["-"],"Bege":["-"],"Cinza":["-"],"Rosa":["-"],"Vermelho":["-"]},"Cama Suspensa":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Caminha 02":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 04":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Casinha 06":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 08":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 16":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Camisa Dryfit":{"Branco":["G","GG","M","P","XGG"],"Preto":["G","GG","M","P","XGG"],"Cinza":["G","GG","M","P","XGG"],"Verde":["G","GG","M","P","XGG"]},"Capa Carro":{"Preto":["-"]},"Casinha 07":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 09":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 10":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Casinha 12":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 13":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 14":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Casinha 15":{"Cinza":["-"],"Azul":["-"],"Bege":["-"]},"Casinha Toca":{"Azul":["-"],"Cinza":["-"],"Bege":["-"],"Chumbo":["-"],"Caramelo":["-"],"Verde":["-"]},"Chuchups":{"Atum":["-"],"Frango":["-"],"Frango com Atum":["-"],"Salmão":["-"]},"Comedouro Bebedouro Jel Plast":{"Bege":["-"],"Branco":["-"],"Cinza":["-"],"Preto":["-"]},"Comedouro Inteligente":{"Branco":["-"]},"Degrau":{"Cinza":["-"],"Azul":["-"],"Bege":["-"],"Grafite":["-","P"],"Marrom":["-"],"Preto":["-"]},"Gaiola Calopsita Jel Plast":{"Vermelho":["-"],"Amarelo":["-"],"Azul":["-"]},"Gaiola Coelho Jel Plast":{"Roxo":["-"],"Azul":["-"],"Vermelho":["-"]},"Gaiola Criadeira Jel Plast":{"Azul":["-"],"Amarelo":["-"],"Preto":["-"],"Vermelho":["-"],"Lilas":["-"],"Branco":["-"]},"Gaiola Criadeira Periqutos Jel Plast Aves Jel Plast":{"Vermelho":["-"]},"Gaiola Hamster 3 Andares Jel Plast":{"Azul":["-"],"Vermelho":["-"]},"Gaiola Hamster Jel Plast":{"Vermelho":["-"],"Azul":["-"],"Roxo":["-"]},"Gaiola Hamster Tubo Super Luxo 3 Andares Jel Plast":{"Azul":["-"],"Violeta":["-"]},"Gaiola Hamster Tubo Super Luxo Slim Jel Plast":{"Violeta":["-"]},"Kit Higiene Sanitário Jel Plast":{"Cinza":["-"],"Bege":["-"],"Branco":["-"],"Preto":["-"]},"Nicho Grande":{"Cinza":["-"]},"Nicho Playground":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Pato Interativo":{"Amarelo":["-"]},"Pega Areia":{"Preto":["-"],"Rosa":["-"],"Azul":["-"],"Amarelo":["-"]},"Piso Carpete":{"Azul":["50x50"],"Bege":["50x50"],"Cinza":["50x50"],"Grafite":["50x50"],"Marrom":["50x50"],"Preto":["50x50"]},"Playground":{"Cinza":["-"]},"Playground 02":{"Cinza":["-"]},"Playground 03":{"Cinza":["-"]},"Playground 04":{"Cinza":["-"]},"Playground 05":{"Cinza":["-"]},"Playground 06":{"Cinza":["-"]},"Poste Arranhador":{"Sisal":["-"]},"Presilhas Aspirais":{"-":["-"]},"Rampa 6mm":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Sanitário":{"Preto":["-"],"Cinza":["-"],"Bege":["-"],"Verde":["-"]},"Sanitario e Pega Areia":{"Cinza":["-"],"Bege":["-"],"Preto":["-"],"Verde":["-"]},"Tapete Lavável":{"Vermelho":["G","M","P"],"Azul":["G","M","P"],"Rosa":["G","M","P"]},"Viveiro Gaiola Jel Plast":{"Amarelo":["-"],"Azul":["-"],"Vermelho":["-"],"Violeta":["-"],"Lilas":["-"]},"Casinha 05":{"Azul":["-"],"Bege":["P"],"Cinza":["-"]},"Tapete Comedouro":{"Vermelho":["P"],"Azul":["P"]},"Casinha 03":{"Azul":["P"],"Bege":["-"]},"Arranhador Carpete 1 Folha":{"Cinza":["P","M"],"Bege":["P","M","G"],"Azul":["G"],"-":["-"]}}
+;
+  const TARGET_PRODUCTS_RAW = Object.keys(CATALOG).sort((a,b) => a.localeCompare(b, 'pt-BR'));
+  const ROLL_PSEUDO_PRODUCT = "Rolo de Matéria-Prima (Adesivo)";
+  const TARGET_PRODUCTS = [ROLL_PSEUDO_PRODUCT, ...TARGET_PRODUCTS_RAW];
+  const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8","Chumbo":"#5a5f66","Branco":"#f2f2f0","Vermelho":"#c0392b","Amarelo":"#e0b400","Rosa":"#e78ea6","Verde":"#3a7d3a","Caramelo":"#b5651d","Roxo":"#6a3d9a","Lilas":"#b19cd9","Violeta":"#7f4fa3","Sisal":"#c2a06b" };
+  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul","Chumbo"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
   const ROLL_TAMS = ["100x7000","50x7000"];
 
@@ -195,7 +214,6 @@
     statusArea.innerHTML = `<div class="status-banner ${kind||'warn'}">${msg}</div>`;
   }
 
-  let NEST = {};      // produto -> cor -> medida -> {} (só usamos a estrutura, não os números de venda)
   let STATE = {};     // produto -> cor -> medida -> {proprio, full}
   let ROLL_STATE = {};
   let leadTimeDays = 15;
@@ -227,13 +245,14 @@
   function renderColorPills(){
     const wrap = document.getElementById('color-pills');
     wrap.innerHTML = '';
-    const cores = Object.keys(NEST[currentProduct] || {});
+    const cores = currentProduct === ROLL_PSEUDO_PRODUCT ? ROLL_COLORS : Object.keys(CATALOG[currentProduct] || {});
     if(!cores.includes(currentCor)) currentCor = cores[0] || null;
-    if(cores.length === 0){ wrap.innerHTML = '<span style="font-size:13px;color:var(--ink-muted);">Nenhuma cor cadastrada ainda para este produto.</span>'; return; }
+    if(cores.length === 0){ wrap.innerHTML = '<span style="font-size:13px;color:var(--ink-muted);">Nenhuma cor cadastrada para este produto.</span>'; return; }
     cores.forEach(cor => {
       const btn = document.createElement('button');
       btn.className = 'color-pill' + (cor === currentCor ? ' active' : '');
-      btn.innerHTML = `<span class="dot" style="background:${COR_HEX[cor]||'#999'};"></span>${cor}`;
+      const dotColor = COR_HEX[cor] || '#999';
+      btn.innerHTML = `<span class="dot" style="background:${dotColor};"></span>${cor}`;
       btn.onclick = () => { currentCor = cor; renderColorPills(); renderMedidaList(); };
       wrap.appendChild(btn);
     });
@@ -243,10 +262,33 @@
     const wrap = document.getElementById('medida-list');
     wrap.innerHTML = '';
     if(!currentProduct || !currentCor){
-      wrap.innerHTML = '<div class="empty-note">Sem dados de venda para este produto ainda — envie um relatório no painel principal primeiro.</div>';
+      wrap.innerHTML = '<div class="empty-note">Nenhuma cor disponível para este produto.</div>';
       return;
     }
-    const medidas = Object.keys(NEST[currentProduct][currentCor] || {}).filter(t => !ROLL_TAMS.includes(t));
+
+    if(currentProduct === ROLL_PSEUDO_PRODUCT){
+      ROLL_TAMS.forEach(tam => {
+        const st = ROLL_STATE[currentCor][tam];
+        const tamLabel = TAM_LABEL[tam] || tam;
+        const card = document.createElement('div'); card.className = 'medida-card';
+        card.innerHTML = `
+          <div class="m-title">${tamLabel}</div>
+          <div class="input-row">
+            <div class="input-group">
+              <label>Estoque (un)</label>
+              <input type="number" inputmode="numeric" min="0" step="1" value="${st.proprio}" class="in-proprio" />
+            </div>
+          </div>
+        `;
+        const proprioInput = card.querySelector('.in-proprio');
+        proprioInput.addEventListener('input', () => { st.proprio = parseFloat(proprioInput.value) || 0; saveStockDebounced(); });
+        proprioInput.addEventListener('blur', flushSave);
+        wrap.appendChild(card);
+      });
+      return;
+    }
+
+    const medidas = (CATALOG[currentProduct][currentCor] || []).filter(t => !ROLL_TAMS.includes(t));
     if(medidas.length === 0){
       wrap.innerHTML = '<div class="empty-note">Sem medidas cadastradas para esta cor.</div>';
       return;
@@ -279,45 +321,6 @@
     });
   }
 
-  function renderRollCards(){
-    const wrap = document.getElementById('roll-cards');
-    wrap.innerHTML = '';
-    ROLL_COLORS.forEach(cor => {
-      const card = document.createElement('div'); card.className = 'medida-card';
-      const st1 = ROLL_STATE[cor]['100x7000'];
-      const st2 = ROLL_STATE[cor]['50x7000'];
-      card.innerHTML = `
-        <div class="m-title"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${COR_HEX[cor]||'#999'};margin-right:6px;"></span>${cor}</div>
-        <div class="input-row" style="margin-bottom:8px;">
-          <div class="input-group">
-            <label>1m × 70m</label>
-            <input type="number" inputmode="numeric" min="0" step="1" value="${st1.proprio}" data-cor="${cor}" data-tam="100x7000" class="roll-in" />
-          </div>
-          <div class="input-group">
-            <label>50cm × 70m</label>
-            <input type="number" inputmode="numeric" min="0" step="1" value="${st2.proprio}" data-cor="${cor}" data-tam="50x7000" class="roll-in" />
-          </div>
-        </div>
-      `;
-      wrap.appendChild(card);
-    });
-    wrap.querySelectorAll('.roll-in').forEach(input => {
-      const update = () => {
-        const cor = input.dataset.cor, tam = input.dataset.tam;
-        ROLL_STATE[cor][tam].proprio = parseFloat(input.value) || 0;
-        saveStockDebounced();
-      };
-      input.addEventListener('input', update);
-      input.addEventListener('blur', flushSave);
-    });
-  }
-
-  document.getElementById('roll-toggle').addEventListener('click', () => {
-    const toggle = document.getElementById('roll-toggle');
-    const body = document.getElementById('roll-body');
-    toggle.classList.toggle('open');
-    body.classList.toggle('open');
-  });
 
   async function init(){
     if(!jsonbinConfigured()){
@@ -326,25 +329,15 @@
     }
 
     const record = await jsonbinGet();
-    const vendas = record && record.vendas;
     const estoque = record && record.estoque;
-
-    if(!vendas || !vendas.nest){
-      showBanner('Não encontramos dados de vendas salvos ainda. Abra o painel principal e processe um relatório antes de usar este app.', 'warn');
-      setSavePill('unavailable');
-      return;
-    }
-
-    NEST = vendas.nest;
-    TARGET_PRODUCTS.forEach(p => { if(!NEST[p]) NEST[p] = {}; });
 
     const savedStockMap = (estoque && estoque.stock) || {};
     STATE = {};
-    TARGET_PRODUCTS.forEach(p => {
+    TARGET_PRODUCTS_RAW.forEach(p => {
       STATE[p] = {};
-      Object.keys(NEST[p]).forEach(cor => {
+      Object.keys(CATALOG[p]).forEach(cor => {
         STATE[p][cor] = {};
-        Object.keys(NEST[p][cor]).forEach(tam => {
+        (CATALOG[p][cor] || []).forEach(tam => {
           if(ROLL_TAMS.includes(tam)) return;
           const saved = savedStockMap[p] && savedStockMap[p][cor] && savedStockMap[p][cor][tam];
           STATE[p][cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0 };
@@ -364,17 +357,88 @@
 
     leadTimeDays = (estoque && typeof estoque.leadTimeDays === 'number') ? estoque.leadTimeDays : 15;
 
-    currentProduct = TARGET_PRODUCTS.find(p => Object.keys(NEST[p]).length > 0) || TARGET_PRODUCTS[0];
+    currentProduct = TARGET_PRODUCTS[0];
 
     renderProductSelect();
     renderColorPills();
     renderMedidaList();
-    renderRollCards();
     setSavePill(jsonbinConfigured() ? 'saved' : 'unavailable');
   }
 
+  // ===================================================================
+  // Gravação no Google Sheets (via Google Apps Script Web App)
+  // ===================================================================
+  // 1. Abra a planilha de destino no Google Sheets.
+  // 2. Menu Extensões > Apps Script.
+  // 3. Apague o código de exemplo e cole o script fornecido (arquivo separado).
+  // 4. Deploy > New deployment > tipo "Web app" > Execute as "Me" > Who has
+  //    access "Anyone" > Deploy. Autorize o acesso quando pedido.
+  // 5. Copie a URL gerada (termina em /exec) e cole abaixo.
+  const GOOGLE_SHEETS_WEBAPP_URL = 'COLE_A_URL_DO_APPS_SCRIPT_AQUI';
+
+  function sheetsConfigured(){
+    return !!(GOOGLE_SHEETS_WEBAPP_URL && GOOGLE_SHEETS_WEBAPP_URL.indexOf('COLE_') !== 0);
+  }
+
+  function buildRowsForSheet(){
+    const rows = [];
+    TARGET_PRODUCTS_RAW.forEach(p => {
+      Object.keys(STATE[p] || {}).forEach(cor => {
+        Object.keys(STATE[p][cor]).forEach(tam => {
+          const st = STATE[p][cor][tam];
+          rows.push({ produto: p, cor, medida: tam === '-' ? 'única' : tam, ricapet: st.proprio, full: st.full });
+        });
+      });
+    });
+    ROLL_COLORS.forEach(cor => {
+      ROLL_TAMS.forEach(tam => {
+        const st = ROLL_STATE[cor][tam];
+        rows.push({ produto: ROLL_PSEUDO_PRODUCT, cor, medida: TAM_LABEL[tam], ricapet: st.proprio, full: 0 });
+      });
+    });
+    return rows;
+  }
+
+  async function gravarNoSheets(){
+    const statusEl = document.getElementById('gravar-status');
+    const btn = document.getElementById('gravar-btn');
+    if(!sheetsConfigured()){
+      statusEl.textContent = '⚠ Configure a URL do Google Sheets no arquivo (GOOGLE_SHEETS_WEBAPP_URL).';
+      statusEl.className = 'gravar-status err';
+      return;
+    }
+    btn.disabled = true;
+    statusEl.textContent = 'Gravando…';
+    statusEl.className = 'gravar-status';
+    try {
+      const rows = buildRowsForSheet();
+      const resp = await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
+        method: 'POST',
+        body: JSON.stringify({ rows, data: new Date().toISOString() })
+      });
+      let json = {};
+      try { json = await resp.json(); } catch(e){ /* ignora corpo vazio/errado */ }
+      if(resp.ok && json.ok){
+        statusEl.textContent = '✓ Gravado na planilha às ' + new Date().toLocaleTimeString('pt-BR') + ' (' + rows.length + ' linhas)';
+        statusEl.className = 'gravar-status ok';
+      } else {
+        statusEl.textContent = '⚠ Erro ao gravar na planilha. Confira a URL e a implantação do Apps Script.';
+        statusEl.className = 'gravar-status err';
+      }
+    } catch(e){
+      console.error('Erro ao gravar no Sheets:', e);
+      statusEl.textContent = '⚠ Erro de conexão ao gravar.';
+      statusEl.className = 'gravar-status err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('gravar-btn').addEventListener('click', gravarNoSheets);
+
   init();
 })();
+
+
 </script>
 </body>
 </html>
