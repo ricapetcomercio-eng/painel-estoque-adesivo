@@ -64,13 +64,23 @@
     border: 1.5px solid var(--border); background: var(--surface); font-size: 14px; font-weight: 600; color: var(--ink-soft);
   }
   .color-pill.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .color-pill.completo { border-color: var(--success-solid); }
+  .color-pill.completo.active { background: var(--success-solid); border-color: var(--success-solid); }
   .color-pill .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .pill-badge { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); color: var(--ink-muted); }
+  .color-pill.completo .pill-badge { background: var(--success-bg); color: var(--success-text); }
+  .color-pill.active .pill-badge { background: rgba(255,255,255,.25); color: #fff; }
 
   .medida-card {
     background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px;
-    padding: 14px 16px; margin-bottom: 12px;
+    padding: 14px 16px; margin-bottom: 12px; transition: border-color .15s ease, background .15s ease;
   }
-  .medida-card .m-title { font-size: 14.5px; font-weight: 700; margin-bottom: 10px; }
+  .medida-card.pendente { border-color: var(--warning-solid); background: var(--warning-bg); }
+  .medida-card.feito { border-color: var(--success-solid); background: var(--success-bg); }
+  .medida-card .m-title { font-size: 14.5px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .status-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .medida-card.pendente .status-badge { background: var(--warning-solid); color: #fff; }
+  .medida-card.feito .status-badge { background: var(--success-solid); color: #fff; }
   .input-row { display: flex; gap: 10px; }
   .input-group { flex: 1; }
   .input-group label { display: block; font-size: 11.5px; color: var(--ink-muted); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
@@ -153,6 +163,8 @@
 
 
 
+
+
 (function(){
   // ===================================================================
   // Mesma configuração de armazenamento do painel principal (jsonbin.io)
@@ -193,8 +205,12 @@
   // Catálogo completo de produtos/cores/tamanhos da empresa (planilha Produtos_Estoque.xlsx).
   // Este app cobre TODO o estoque — diferente do painel de gestão, que só acompanha
   // os produtos com dados de venda processados.
-  const CATALOG = {"Alimentador Automático":{"Branco":["-"]},"Areia de Mandioca":{"Bege":["-"]},"Arranhador Adesivo":{"Preto":["100x50","120x50","200x50","48X30","50x30","70x50"],"Grafite":["100x50","120x50","200x50","50x30","70x50"],"Cinza":["100x50","120x50","200x50","50x30","70x50"],"Marrom":["100x50","120x50","200x50","50x30","70x50"],"Bege":["100x50","120x50","200x50","50x30","70x50"],"Azul":["100x50","120x50","200x50","50x30","70x50"],"Chumbo":["50x30"]},"Arranhador Adesivo Gato":{"Preto":["-"],"Bege":["-"],"Azul":["-"],"Cinza":["-"],"Grafite":["-"],"Marrom":["-"]},"Arranhador Cara de Gato":{"Preto":["-"],"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Arranhador de Braço":{"Bege":["G","M","P"],"Cinza":["G","M","P"],"Azul":["G","M","P"]},"Arranhador de Braço Simples":{"Azul":["G","M","P"],"Cinza":["G","M","P"],"Bege":["G","M","P"]},"Arranhador de Madeira":{"60cm":["G"],"Azul":["G"],"Cinza":["G"],"Bege":["G"]},"Arranhador Parede":{"Sisal":["-"],"Bege":["-"],"Cinza":["-"],"Preto":["-"],"Marrom":["-"],"Grafite":["-"],"Azul":["-"]},"Arranhador Rampa":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Arranhador Túnel":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Banheiro Inteligente":{"Cinza":["-"]},"Bolsa Transporte Aves Jel Plast":{"Azul":["-"],"Vermelho":["-"]},"Brinquedo Interativo":{"Preto":["-"],"Grafite":["-"],"Azul":["-"],"Bege":["-"],"Marrom":["-"],"Cinza":["-"]},"Caixa Sanitária Jel Plast":{"Preto":["-"],"Amarelo":["-"],"Azul":["-"],"Bege":["-"],"Cinza":["-"],"Rosa":["-"],"Vermelho":["-"]},"Cama Suspensa":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Caminha 02":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 04":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Casinha 06":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 08":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 16":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Camisa Dryfit":{"Branco":["G","GG","M","P","XGG"],"Preto":["G","GG","M","P","XGG"],"Cinza":["G","GG","M","P","XGG"],"Verde":["G","GG","M","P","XGG"]},"Capa Carro":{"Preto":["-"]},"Casinha 07":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 09":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 10":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Casinha 12":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 13":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 14":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Casinha 15":{"Cinza":["-"],"Azul":["-"],"Bege":["-"]},"Casinha Toca":{"Azul":["-"],"Cinza":["-"],"Bege":["-"],"Chumbo":["-"],"Caramelo":["-"],"Verde":["-"]},"Chuchups":{"Atum":["-"],"Frango":["-"],"Frango com Atum":["-"],"Salmão":["-"]},"Comedouro Bebedouro Jel Plast":{"Bege":["-"],"Branco":["-"],"Cinza":["-"],"Preto":["-"]},"Comedouro Inteligente":{"Branco":["-"]},"Degrau":{"Cinza":["-"],"Azul":["-"],"Bege":["-"],"Grafite":["-","P"],"Marrom":["-"],"Preto":["-"]},"Gaiola Calopsita Jel Plast":{"Vermelho":["-"],"Amarelo":["-"],"Azul":["-"]},"Gaiola Coelho Jel Plast":{"Roxo":["-"],"Azul":["-"],"Vermelho":["-"]},"Gaiola Criadeira Jel Plast":{"Azul":["-"],"Amarelo":["-"],"Preto":["-"],"Vermelho":["-"],"Lilas":["-"],"Branco":["-"]},"Gaiola Criadeira Periqutos Jel Plast Aves Jel Plast":{"Vermelho":["-"]},"Gaiola Hamster 3 Andares Jel Plast":{"Azul":["-"],"Vermelho":["-"]},"Gaiola Hamster Jel Plast":{"Vermelho":["-"],"Azul":["-"],"Roxo":["-"]},"Gaiola Hamster Tubo Super Luxo 3 Andares Jel Plast":{"Azul":["-"],"Violeta":["-"]},"Gaiola Hamster Tubo Super Luxo Slim Jel Plast":{"Violeta":["-"]},"Kit Higiene Sanitário Jel Plast":{"Cinza":["-"],"Bege":["-"],"Branco":["-"],"Preto":["-"]},"Nicho Grande":{"Cinza":["-"]},"Nicho Playground":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Pato Interativo":{"Amarelo":["-"]},"Pega Areia":{"Preto":["-"],"Rosa":["-"],"Azul":["-"],"Amarelo":["-"]},"Piso Carpete":{"Azul":["50x50"],"Bege":["50x50"],"Cinza":["50x50"],"Grafite":["50x50"],"Marrom":["50x50"],"Preto":["50x50"]},"Playground":{"Cinza":["-"]},"Playground 02":{"Cinza":["-"]},"Playground 03":{"Cinza":["-"]},"Playground 04":{"Cinza":["-"]},"Playground 05":{"Cinza":["-"]},"Playground 06":{"Cinza":["-"]},"Poste Arranhador":{"Sisal":["-"]},"Presilhas Aspirais":{"-":["-"]},"Rampa 6mm":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Sanitário":{"Preto":["-"],"Cinza":["-"],"Bege":["-"],"Verde":["-"]},"Sanitario e Pega Areia":{"Cinza":["-"],"Bege":["-"],"Preto":["-"],"Verde":["-"]},"Tapete Lavável":{"Vermelho":["G","M","P"],"Azul":["G","M","P"],"Rosa":["G","M","P"]},"Viveiro Gaiola Jel Plast":{"Amarelo":["-"],"Azul":["-"],"Vermelho":["-"],"Violeta":["-"],"Lilas":["-"]},"Casinha 05":{"Azul":["-"],"Bege":["P"],"Cinza":["-"]},"Tapete Comedouro":{"Vermelho":["P"],"Azul":["P"]},"Casinha 03":{"Azul":["P"],"Bege":["-"]},"Arranhador Carpete 1 Folha":{"Cinza":["P","M"],"Bege":["P","M","G"],"Azul":["G"],"-":["-"]}}
-;
+  const CATALOG = {"Alimentador Automático":{"Branco":["-"]},"Areia de Mandioca":{"Bege":["-"]},"Arranhador Adesivo":{"Preto":["48X30","50x30","70x50","100x50","120x50","200x50"],"Grafite":["50x30","70x50","100x50","120x50","200x50"],"Cinza":["50x30","70x50","100x50","120x50","200x50"],"Marrom":["50x30","70x50","100x50","120x50","200x50"],"Bege":["50x30","70x50","100x50","120x50","200x50"],"Azul":["50x30","70x50","100x50","120x50","200x50"],"Chumbo":["48X30","50x30","70x50","100x50","120x50","200x50"]},"Arranhador Adesivo Gato":{"Preto":["-"],"Bege":["-"],"Azul":["-"],"Cinza":["-"],"Grafite":["-"],"Marrom":["-"]},"Arranhador Cara de Gato":{"Preto":["-"],"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Arranhador de Braço":{"Bege":["P","M","G"],"Cinza":["P","M","G"],"Azul":["P","M","G"]},"Arranhador de Braço Simples":{"Azul":["P","M","G"],"Cinza":["P","M","G"],"Bege":["P","M","G"]},"Arranhador de Madeira":{"60cm":["G"],"Azul":["G"],"Cinza":["G"],"Bege":["G"]},"Arranhador Parede":{"Sisal":["-"],"Bege":["-"],"Cinza":["-"],"Preto":["-"],"Marrom":["-"],"Grafite":["-"],"Azul":["-"]},"Arranhador Rampa":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Arranhador Túnel":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Banheiro Inteligente":{"Cinza":["-"]},"Bolsa Transporte Aves Jel Plast":{"Azul":["-"],"Vermelho":["-"]},"Brinquedo Interativo":{"Preto":["-"],"Grafite":["-"],"Azul":["-"],"Bege":["-"],"Marrom":["-"],"Cinza":["-"]},"Caixa Sanitária Jel Plast":{"Preto":["-"],"Amarelo":["-"],"Azul":["-"],"Bege":["-"],"Cinza":["-"],"Rosa":["-"],"Vermelho":["-"]},"Cama Suspensa":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Caminha 02":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 04":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Casinha 06":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 08":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 16":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Camisa Dryfit":{"Branco":["P","M","G","GG","XGG"],"Preto":["P","M","G","GG","XGG"],"Cinza":["P","M","G","GG","XGG"],"Verde":["P","M","G","GG","XGG"]},"Capa Carro":{"Preto":["-"]},"Casinha 07":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Casinha 09":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 10":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Casinha 12":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 13":{"Azul":["-"],"Cinza":["-"],"Bege":["-"]},"Casinha 14":{"Azul":["-"],"Bege":["-"],"Cinza":["-"]},"Casinha 15":{"Cinza":["-"],"Azul":["-"],"Bege":["-"]},"Casinha Toca":{"Azul":["-"],"Cinza":["-"],"Bege":["-"],"Chumbo":["-"],"Caramelo":["-"],"Verde":["-"]},"Chuchups":{"Atum":["-"],"Frango":["-"],"Frango com Atum":["-"],"Salmão":["-"]},"Comedouro Bebedouro Jel Plast":{"Bege":["-"],"Branco":["-"],"Cinza":["-"],"Preto":["-"]},"Comedouro Inteligente":{"Branco":["-"]},"Degrau":{"Cinza":["-"],"Azul":["-"],"Bege":["-"],"Grafite":["P","-"],"Marrom":["-"],"Preto":["-"]},"Gaiola Calopsita Jel Plast":{"Vermelho":["-"],"Amarelo":["-"],"Azul":["-"]},"Gaiola Coelho Jel Plast":{"Roxo":["-"],"Azul":["-"],"Vermelho":["-"]},"Gaiola Criadeira Jel Plast":{"Azul":["-"],"Amarelo":["-"],"Preto":["-"],"Vermelho":["-"],"Lilas":["-"],"Branco":["-"]},"Gaiola Criadeira Periqutos Jel Plast Aves Jel Plast":{"Vermelho":["-"]},"Gaiola Hamster 3 Andares Jel Plast":{"Azul":["-"],"Vermelho":["-"]},"Gaiola Hamster Jel Plast":{"Vermelho":["-"],"Azul":["-"],"Roxo":["-"]},"Gaiola Hamster Tubo Super Luxo 3 Andares Jel Plast":{"Azul":["-"],"Violeta":["-"]},"Gaiola Hamster Tubo Super Luxo Slim Jel Plast":{"Violeta":["-"]},"Kit Higiene Sanitário Jel Plast":{"Cinza":["-"],"Bege":["-"],"Branco":["-"],"Preto":["-"]},"Nicho Grande":{"Cinza":["-"]},"Nicho Playground":{"Bege":["-"],"Cinza":["-"],"Azul":["-"]},"Pato Interativo":{"Amarelo":["-"]},"Pega Areia":{"Preto":["-"],"Rosa":["-"],"Azul":["-"],"Amarelo":["-"]},"Piso Carpete":{"Azul":["50x50"],"Bege":["50x50"],"Cinza":["50x50"],"Grafite":["50x50"],"Marrom":["50x50"],"Preto":["50x50"]},"Playground":{"Cinza":["-"]},"Playground 02":{"Cinza":["-"]},"Playground 03":{"Cinza":["-"]},"Playground 04":{"Cinza":["-"]},"Playground 05":{"Cinza":["-"]},"Playground 06":{"Cinza":["-"]},"Poste Arranhador":{"Sisal":["-"]},"Presilhas Aspirais":{"-":["-"]},"Rampa 6mm":{"Bege":["-"],"Azul":["-"],"Cinza":["-"]},"Sanitário":{"Preto":["-"],"Cinza":["-"],"Bege":["-"],"Verde":["-"]},"Sanitario e Pega Areia":{"Cinza":["-"],"Bege":["-"],"Preto":["-"],"Verde":["-"]},"Tapete Lavável":{"Vermelho":["P","M","G"],"Azul":["P","M","G"],"Rosa":["P","M","G"]},"Viveiro Gaiola Jel Plast":{"Amarelo":["-"],"Azul":["-"],"Vermelho":["-"],"Violeta":["-"],"Lilas":["-"]},"Casinha 05":{"Azul":["-"],"Bege":["P"],"Cinza":["-"]},"Tapete Comedouro":{"Vermelho":["P"],"Azul":["P"]},"Casinha 03":{"Azul":["P"],"Bege":["-"]},"Arranhador Carpete 1 Folha":{"Cinza":["P","M"],"Bege":["P","M","G"],"Azul":["G"],"-":["-"]}};
+  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul","Chumbo"];
+  const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
+  const ROLL_TAMS = ["100x7000","50x7000"];
+  const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8","Chumbo":"#5a5f66","Branco":"#f2f2f0","Vermelho":"#c0392b","Amarelo":"#e0b400","Rosa":"#e78ea6","Verde":"#3a7d3a","Caramelo":"#b5651d","Roxo":"#6a3d9a","Lilas":"#b19cd9","Violeta":"#7f4fa3","Sisal":"#c2a06b" };
+
   const TARGET_PRODUCTS_RAW = Object.keys(CATALOG).sort((a,b) => a.localeCompare(b, 'pt-BR'));
   const ROLL_PSEUDO_PRODUCT = "Rolo de Matéria-Prima (Adesivo)";
 
@@ -210,14 +226,18 @@
   const JEL_PLAST = TARGET_PRODUCTS_RAW.filter(p => p.indexOf('Jel Plast') !== -1)
     .sort((a,b) => displayNameFor(a).localeCompare(displayNameFor(b), 'pt-BR'));
   const TARGET_PRODUCTS = [...NAO_JEL_PLAST, ROLL_PSEUDO_PRODUCT, ...JEL_PLAST];
-  const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8","Chumbo":"#5a5f66","Branco":"#f2f2f0","Vermelho":"#c0392b","Amarelo":"#e0b400","Rosa":"#e78ea6","Verde":"#3a7d3a","Caramelo":"#b5651d","Roxo":"#6a3d9a","Lilas":"#b19cd9","Violeta":"#7f4fa3","Sisal":"#c2a06b" };
-  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul","Chumbo"];
-  const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
-  const ROLL_TAMS = ["100x7000","50x7000"];
 
   function debounce(fn, wait){
     let t = null;
     return function(...args){ clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
+  }
+
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function contadoHoje(st){
+    return !!(st && st.atualizadoEm === todayStr());
   }
 
   const statusArea = document.getElementById('status-area');
@@ -248,12 +268,32 @@
     setSavePill(ok ? 'saved' : 'error');
   }
 
+  function progressoCor(produto, cor){
+    if(produto === ROLL_PSEUDO_PRODUCT){
+      const tams = ROLL_TAMS;
+      const feitos = tams.filter(t => contadoHoje(ROLL_STATE[cor] && ROLL_STATE[cor][t])).length;
+      return { feitos, total: tams.length };
+    }
+    const tams = (CATALOG[produto][cor] || []).filter(t => !ROLL_TAMS.includes(t));
+    const feitos = tams.filter(t => contadoHoje(STATE[produto][cor] && STATE[produto][cor][t])).length;
+    return { feitos, total: tams.length };
+  }
+  function progressoProduto(produto){
+    const cores = produto === ROLL_PSEUDO_PRODUCT ? ROLL_COLORS : Object.keys(CATALOG[produto] || {});
+    let feitos = 0, total = 0;
+    cores.forEach(cor => { const p = progressoCor(produto, cor); feitos += p.feitos; total += p.total; });
+    return { feitos, total };
+  }
+
   function renderProductSelect(){
     const sel = document.getElementById('product-select');
     sel.innerHTML = '';
     TARGET_PRODUCTS.forEach(p => {
       const opt = document.createElement('option');
-      opt.value = p; opt.textContent = displayNameFor(p);
+      opt.value = p;
+      const prog = progressoProduto(p);
+      const marcador = prog.total === 0 ? '' : (prog.feitos === prog.total ? ' ✓' : ` (${prog.feitos}/${prog.total})`);
+      opt.textContent = displayNameFor(p) + marcador;
       if(p === currentProduct) opt.selected = true;
       sel.appendChild(opt);
     });
@@ -268,9 +308,12 @@
     if(cores.length === 0){ wrap.innerHTML = '<span style="font-size:13px;color:var(--ink-muted);">Nenhuma cor cadastrada para este produto.</span>'; return; }
     cores.forEach(cor => {
       const btn = document.createElement('button');
-      btn.className = 'color-pill' + (cor === currentCor ? ' active' : '');
+      const prog = progressoCor(currentProduct, cor);
+      const completo = prog.total > 0 && prog.feitos === prog.total;
+      btn.className = 'color-pill' + (cor === currentCor ? ' active' : '') + (completo ? ' completo' : '');
       const dotColor = COR_HEX[cor] || '#999';
-      btn.innerHTML = `<span class="dot" style="background:${dotColor};"></span>${cor}`;
+      const badge = prog.total > 0 ? `<span class="pill-badge">${completo ? '✓' : prog.feitos + '/' + prog.total}</span>` : '';
+      btn.innerHTML = `<span class="dot" style="background:${dotColor};"></span>${cor}${badge}`;
       btn.onclick = () => { currentCor = cor; renderColorPills(); renderMedidaList(); };
       wrap.appendChild(btn);
     });
@@ -288,9 +331,10 @@
       ROLL_TAMS.forEach(tam => {
         const st = ROLL_STATE[currentCor][tam];
         const tamLabel = TAM_LABEL[tam] || tam;
-        const card = document.createElement('div'); card.className = 'medida-card';
+        const feito = contadoHoje(st);
+        const card = document.createElement('div'); card.className = 'medida-card' + (feito ? ' feito' : ' pendente');
         card.innerHTML = `
-          <div class="m-title">${tamLabel}</div>
+          <div class="m-title">${tamLabel}<span class="status-badge">${feito ? '✓ Contado hoje' : 'Pendente hoje'}</span></div>
           <div class="input-row">
             <div class="input-group solo">
               <label>Estoque (un)</label>
@@ -299,7 +343,15 @@
           </div>
         `;
         const proprioInput = card.querySelector('.in-proprio');
-        proprioInput.addEventListener('input', () => { st.proprio = parseFloat(proprioInput.value) || 0; saveStockDebounced(); });
+        const marcarContado = () => {
+          st.proprio = parseFloat(proprioInput.value) || 0;
+          st.atualizadoEm = todayStr();
+          card.classList.remove('pendente'); card.classList.add('feito');
+          card.querySelector('.status-badge').textContent = '✓ Contado hoje';
+          renderColorPills();
+          saveStockDebounced();
+        };
+        proprioInput.addEventListener('input', marcarContado);
         proprioInput.addEventListener('blur', flushSave);
         wrap.appendChild(card);
       });
@@ -315,9 +367,10 @@
       if(!STATE[currentProduct][currentCor][tam]) STATE[currentProduct][currentCor][tam] = { proprio: 0, full: 0 };
       const st = STATE[currentProduct][currentCor][tam];
       const tamLabel = tam === '-' ? 'Estoque geral' : tam;
-      const card = document.createElement('div'); card.className = 'medida-card';
+      const feito = contadoHoje(st);
+      const card = document.createElement('div'); card.className = 'medida-card' + (feito ? ' feito' : ' pendente');
       card.innerHTML = `
-        <div class="m-title">${tamLabel}</div>
+        <div class="m-title">${tamLabel}<span class="status-badge">${feito ? '✓ Contado hoje' : 'Pendente hoje'}</span></div>
         <div class="input-row">
           <div class="input-group solo">
             <label>Estoque Ricapet (un)</label>
@@ -326,7 +379,15 @@
         </div>
       `;
       const proprioInput = card.querySelector('.in-proprio');
-      proprioInput.addEventListener('input', () => { st.proprio = parseFloat(proprioInput.value) || 0; saveStockDebounced(); });
+      const marcarContado = () => {
+        st.proprio = parseFloat(proprioInput.value) || 0;
+        st.atualizadoEm = todayStr();
+        card.classList.remove('pendente'); card.classList.add('feito');
+        card.querySelector('.status-badge').textContent = '✓ Contado hoje';
+        renderColorPills();
+        saveStockDebounced();
+      };
+      proprioInput.addEventListener('input', marcarContado);
       proprioInput.addEventListener('blur', flushSave);
       wrap.appendChild(card);
     });
@@ -351,7 +412,7 @@
         (CATALOG[p][cor] || []).forEach(tam => {
           if(ROLL_TAMS.includes(tam)) return;
           const saved = savedStockMap[p] && savedStockMap[p][cor] && savedStockMap[p][cor][tam];
-          STATE[p][cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0 };
+          STATE[p][cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0, atualizadoEm: (saved && saved.atualizadoEm) || null };
         });
       });
     });
@@ -362,7 +423,7 @@
       ROLL_STATE[cor] = {};
       ROLL_TAMS.forEach(tam => {
         const saved = savedRollsMap[cor] && savedRollsMap[cor][tam];
-        ROLL_STATE[cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0 };
+        ROLL_STATE[cor][tam] = { proprio: (saved && saved.proprio) || 0, full: (saved && saved.full) || 0, atualizadoEm: (saved && saved.atualizadoEm) || null };
       });
     });
 
@@ -448,6 +509,8 @@
 
   init();
 })();
+
+
 
 
 
