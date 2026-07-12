@@ -267,6 +267,21 @@
             <span class="hint">dias entre pedir e receber a matéria-prima</span>
             <span class="hint" id="save-indicator" style="margin-left:auto;font-weight:600;"></span>
           </div>
+          <div class="upload-grid" style="margin-bottom:16px;">
+            <div class="upload-box">
+              <label>Relatório Estoque FULL — Mercado Livre (.xlsx)</label>
+              <input type="file" id="file-full-ml" accept=".xlsx" />
+              <div class="fname" id="fname-full-ml">Nenhum arquivo selecionado</div>
+            </div>
+            <div class="upload-box">
+              <label>Relatório Estoque FULL — Shopee (.xlsx)</label>
+              <input type="file" id="file-full-sh" accept=".xlsx" />
+              <div class="fname" id="fname-full-sh">Nenhum arquivo selecionado</div>
+            </div>
+          </div>
+          <button class="btn" id="process-full-btn" disabled>Atualizar Estoque FULL a partir dos relatórios</button>
+          <div class="status-line muted" id="status-line-full" style="margin-bottom:16px;"></div>
+
           <div id="roll-stock-section" style="margin-bottom:20px;"></div>
           <div class="product-tabs" id="stock-product-tabs"></div>
           <div id="stock-cores"></div>
@@ -307,6 +322,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -316,8 +332,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-  const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -350,7 +366,7 @@
   }
   const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Caminha 02","Casinha 03","Casinha 09","Casinha 12","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Poste Arranhador","Rampa 6mm"];
   const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8" };
-  const ROLL_COLORS = ["Azul","Bege","Cinza","Grafite","Marrom","Preto"];
+  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
   const ROLL_TAMS = ["100x7000","50x7000"];
   const MESES_PT = {'janeiro':0,'fevereiro':1,'março':2,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
@@ -455,25 +471,6 @@
     const m = String(tamanho).trim().match(/^(\d+)[xX](\d+)/);
     if(!m) return null;
     return (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100);
-  }
-  // ---- ordenação: produtos (A-Z), cores (A-Z) e tamanhos (menor -> maior) ----
-  function sortCores(arr){
-    return arr.slice().sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', {sensitivity:'base'}));
-  }
-  function tamSortKey(tam){
-    if(!tam || tam === '-') return null;
-    const m = String(tam).trim().match(/^(\d+)[xX](\d+)/);
-    if(!m) return null;
-    return parseInt(m[1],10) * parseInt(m[2],10);
-  }
-  function sortTamanhos(arr){
-    return arr.slice().sort((a,b) => {
-      const ka = tamSortKey(a), kb = tamSortKey(b);
-      if(ka === null && kb === null) return String(a).localeCompare(String(b), 'pt-BR', {sensitivity:'base'});
-      if(ka === null) return 1;
-      if(kb === null) return -1;
-      return ka - kb;
-    });
   }
   function monthLabel(anoMesStr){
     const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -899,6 +896,123 @@
       flushStockSave();
     };
 
+    // ---- Importar Estoque FULL a partir dos relatórios ML + Shopee ----
+    let fullFilesSelected = { ml: null, sh: null };
+    const fileFullMlInput = document.getElementById('file-full-ml');
+    const fileFullShInput = document.getElementById('file-full-sh');
+    const fnameFullMlEl = document.getElementById('fname-full-ml');
+    const fnameFullShEl = document.getElementById('fname-full-sh');
+    const processFullBtn = document.getElementById('process-full-btn');
+    const statusLineFullEl = document.getElementById('status-line-full');
+
+    function readFileAsArrayBufferLocal(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    function setStatusFull(msg, kind){
+      statusLineFullEl.textContent = msg;
+      statusLineFullEl.className = 'status-line' + (kind ? (' ' + kind) : ' muted');
+    }
+    function updateProcessFullBtn(){ processFullBtn.disabled = !(fullFilesSelected.ml && fullFilesSelected.sh); }
+    fileFullMlInput.addEventListener('change', () => {
+      fullFilesSelected.ml = fileFullMlInput.files[0] || null;
+      fnameFullMlEl.textContent = fullFilesSelected.ml ? fullFilesSelected.ml.name : 'Nenhum arquivo selecionado';
+      updateProcessFullBtn();
+    });
+    fileFullShInput.addEventListener('change', () => {
+      fullFilesSelected.sh = fileFullShInput.files[0] || null;
+      fnameFullShEl.textContent = fullFilesSelected.sh ? fullFilesSelected.sh.name : 'Nenhum arquivo selecionado';
+      updateProcessFullBtn();
+    });
+
+    // Extrai {PRODUTO,COR,TAMANHO,QUANTIDADE_TOTAL} de uma aba "Resumo Unificado",
+    // localizando as colunas pelo nome do cabeçalho (não pela posição), já que ML
+    // e Shopee têm layouts diferentes.
+    function extrairResumoUnificado(workbook){
+      const sheet = workbook.Sheets['Resumo Unificado'];
+      if(!sheet) return [];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+      if(rows.length < 2) return [];
+      const header = rows[0].map(h => String(h || '').trim().toUpperCase());
+      const idxProduto = header.indexOf('PRODUTO');
+      const idxCor = header.indexOf('COR');
+      const idxTamanho = header.indexOf('TAMANHO');
+      const idxQtd = header.indexOf('QUANTIDADE_TOTAL');
+      if(idxProduto === -1 || idxQtd === -1) return [];
+      const out = [];
+      for(let i = 1; i < rows.length; i++){
+        const r = rows[i];
+        if(!r || !r[idxProduto]) continue;
+        const qtd = parseFloat(r[idxQtd]);
+        out.push({
+          produto: String(r[idxProduto]).trim(),
+          cor: idxCor !== -1 ? (String(r[idxCor] || '-').trim() || '-') : '-',
+          tamanho: idxTamanho !== -1 ? (String(r[idxTamanho] || '-').trim() || '-') : '-',
+          qtd: isNaN(qtd) ? 0 : qtd
+        });
+      }
+      return out;
+    }
+
+    async function processFullFiles(){
+      processFullBtn.disabled = true;
+      setStatusFull('Lendo os arquivos...', 'muted');
+      try {
+        const [mlBuf, shBuf] = await Promise.all([
+          readFileAsArrayBufferLocal(fullFilesSelected.ml),
+          readFileAsArrayBufferLocal(fullFilesSelected.sh)
+        ]);
+        setStatusFull('Processando planilhas...', 'muted');
+        const mlWb = XLSX.read(mlBuf, { type: 'array', cellDates: true });
+        const shWb = XLSX.read(shBuf, { type: 'array', cellDates: true });
+
+        const linhas = [...extrairResumoUnificado(mlWb), ...extrairResumoUnificado(shWb)];
+        if(linhas.length === 0){
+          setStatusFull('Não encontrei a aba "Resumo Unificado" com as colunas esperadas nos arquivos enviados.', 'err');
+          processFullBtn.disabled = false;
+          return;
+        }
+
+        // agrega por Produto+Cor+Medida, somando as duas empresas e os dois relatórios juntos
+        const agregado = {};
+        linhas.forEach(l => {
+          const chave = l.produto + '||' + l.cor + '||' + l.tamanho;
+          agregado[chave] = (agregado[chave] || 0) + l.qtd;
+        });
+
+        let atualizados = 0, criados = 0;
+        Object.keys(agregado).forEach(chave => {
+          const [produto, cor, tamanho] = chave.split('||');
+          const qtd = agregado[chave];
+          if(!STATE[produto]) STATE[produto] = {};
+          if(!STATE[produto][cor]) STATE[produto][cor] = {};
+          if(!STATE[produto][cor][tamanho]){
+            STATE[produto][cor][tamanho] = { proprio: 0, full: qtd };
+            criados++;
+          } else {
+            STATE[produto][cor][tamanho].full = qtd;
+            atualizados++;
+          }
+        });
+
+        renderStockSection();
+        renderResultSection();
+        await flushStockSave();
+
+        setStatusFull(`✓ Estoque FULL atualizado: ${atualizados} combinações atualizadas, ${criados} novas criadas (${Object.keys(agregado).length} no total).`, 'ok');
+      } catch(err){
+        console.error('Erro ao processar arquivos de Estoque FULL:', err);
+        setStatusFull('⚠ Erro ao processar os arquivos: ' + err.message, 'err');
+      } finally {
+        processFullBtn.disabled = false;
+      }
+    }
+    processFullBtn.addEventListener('click', processFullFiles);
+
     let currentProduct = TARGET_PRODUCTS.find(p => Object.keys(NEST[p]).length > 0) || TARGET_PRODUCTS[0];
     let showGeralView = false;
 
@@ -1019,11 +1133,10 @@
 
       const colorUnion = new Set();
       TARGET_PRODUCTS.forEach(p => Object.keys(NEST[p]).forEach(c => colorUnion.add(c)));
-      const colorUnionSorted = sortCores(Array.from(colorUnion));
 
       let totalM2 = 0, totalUn = 0, totalRollStock = 0;
       const perColor = [];
-      colorUnionSorted.forEach(cor => {
+      colorUnion.forEach(cor => {
         let m2Bruto = 0, un = 0, minDays = Infinity;
         const byProduct = {};
         TARGET_PRODUCTS.forEach(p => {
@@ -1039,6 +1152,8 @@
         totalM2 += m2Liquido; totalUn += un; totalRollStock += rollDisponivel;
         perColor.push({ cor, m2Bruto, m2Liquido, rollDisponivel, un, minDays, byProduct });
       });
+      perColor.sort((a,b) => (b.m2Liquido + b.un) - (a.m2Liquido + a.un));
+
       const m2ProductsList = M2_PRODUCTS.length ? M2_PRODUCTS.join(' + ') : '—';
       const unProductsList = UN_PRODUCTS.length ? UN_PRODUCTS.join(' + ') : '—';
 
@@ -1113,7 +1228,7 @@
       renderRollStockSection();
       const wrap = document.getElementById('stock-cores');
       wrap.innerHTML = '';
-      const cores = sortCores(Object.keys(NEST[currentProduct]));
+      const cores = Object.keys(NEST[currentProduct]);
       if(cores.length === 0){ wrap.innerHTML = '<div class="empty-note">Sem dados de vendas para este produto no período carregado.</div>'; return; }
       cores.forEach(cor => {
         const block = document.createElement('div'); block.className = 'cor-block';
@@ -1121,7 +1236,7 @@
         head.innerHTML = `<span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};"></span>${cor}`;
         block.appendChild(head);
         const rowsWrap = document.createElement('div'); rowsWrap.className = 'medida-rows';
-        const tamKeys = sortTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)));
+        const tamKeys = Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam));
         if(tamKeys.length === 0){
           rowsWrap.innerHTML = '<div class="medida-row" style="color:var(--ink-muted);font-size:12.5px;">Sem estoque de peças a controlar aqui — este produto usa apenas o estoque de rolo acima.</div>';
         }
@@ -1153,11 +1268,12 @@
       renderResultTabs();
       if(showGeralView){ renderGeralView(); return; }
       const unitLabel = UNIT_LABEL[currentProduct];
-      const cores = sortCores(Object.keys(NEST[currentProduct]));
+      const cores = Object.keys(NEST[currentProduct]);
 
       const heroEl = document.getElementById('hero-total');
       let total = 0;
       const porCor = cores.map(cor => { const v = calcCorTotal(currentProduct, cor); total += v; return {cor, v}; });
+      porCor.sort((a,b) => b.v - a.v);
       heroEl.innerHTML = `
         <div>
           <div class="h-label">Total a comprar de <strong>${currentProduct}</strong> — todas as cores</div>
@@ -1200,7 +1316,7 @@
         tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado (un)</th><th>Estimado hoje (${unitLabel})</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         const today = new Date(); today.setHours(0,0,0,0);
-        sortTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam))).forEach(tam => {
+        Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)).forEach(tam => {
           const rec = NEST[currentProduct][cor][tam];
           const area = areaPerUnitFor(currentProduct, tam);
           const src = area !== null ? rec.units.map(u => u*area) : rec.units;
@@ -1279,6 +1395,7 @@
   }
   init();
 })();
+
 
 
 
