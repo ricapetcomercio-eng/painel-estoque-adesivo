@@ -323,6 +323,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -332,8 +333,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-  const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -365,8 +366,8 @@
     return jsonbinPut(current);
   }
   const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Caminha 02","Casinha 03","Casinha 09","Casinha 12","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Poste Arranhador","Rampa 6mm"];
-  const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8" };
-  const ROLL_COLORS = ["Cinza","Bege","Grafite","Marrom","Preto","Azul"];
+  const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8","Chumbo":"#5a5f66" };
+  const ROLL_COLORS = ["Azul","Bege","Chumbo","Cinza","Grafite","Marrom","Preto"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
   const ROLL_TAMS = ["100x7000","50x7000"];
   const MESES_PT = {'janeiro':0,'fevereiro':1,'março':2,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
@@ -410,6 +411,26 @@
     const m = String(tam).match(/^(\d+)[xX](\d+)/);
     if(!m) return null;
     return (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100);
+  }
+  const CLOTHING_ORDER = ['PP','P','M','G','GG','XG','XGG','XXG'];
+  function tamSortKey(tam){
+    const area = tamAreaM2(tam);
+    if(area !== null) return [0, area, tam];
+    const idxRoupa = CLOTHING_ORDER.indexOf(String(tam).toUpperCase());
+    if(idxRoupa !== -1) return [1, idxRoupa, tam];
+    if(tam === '-') return [2, 0, tam];
+    return [3, 0, String(tam).toLowerCase()];
+  }
+  function sortedTamanhos(tams){
+    return [...tams].sort((a,b) => {
+      const ka = tamSortKey(a), kb = tamSortKey(b);
+      if(ka[0] !== kb[0]) return ka[0]-kb[0];
+      if(ka[1] !== kb[1]) return ka[1]-kb[1];
+      return String(ka[2]).localeCompare(String(kb[2]), 'pt-BR');
+    });
+  }
+  function sortedCores(cores){
+    return [...cores].sort((a,b) => (a==='-') - (b==='-') || String(a).localeCompare(String(b), 'pt-BR'));
   }
   // Área (m²) consumida por unidade de um produto/medida específicos. Unifica os
   // dois casos: produtos com área fixa por peça (tabela) e produtos que variam de
@@ -1228,7 +1249,7 @@
       renderRollStockSection();
       const wrap = document.getElementById('stock-cores');
       wrap.innerHTML = '';
-      const cores = Object.keys(NEST[currentProduct]);
+      const cores = sortedCores(Object.keys(NEST[currentProduct]));
       if(cores.length === 0){ wrap.innerHTML = '<div class="empty-note">Sem dados de vendas para este produto no período carregado.</div>'; return; }
       cores.forEach(cor => {
         const block = document.createElement('div'); block.className = 'cor-block';
@@ -1236,7 +1257,7 @@
         head.innerHTML = `<span class="rp-dot" style="background:${COR_HEX[cor]||'#999'};"></span>${cor}`;
         block.appendChild(head);
         const rowsWrap = document.createElement('div'); rowsWrap.className = 'medida-rows';
-        const tamKeys = Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam));
+        const tamKeys = sortedTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)));
         if(tamKeys.length === 0){
           rowsWrap.innerHTML = '<div class="medida-row" style="color:var(--ink-muted);font-size:12.5px;">Sem estoque de peças a controlar aqui — este produto usa apenas o estoque de rolo acima.</div>';
         }
@@ -1268,7 +1289,7 @@
       renderResultTabs();
       if(showGeralView){ renderGeralView(); return; }
       const unitLabel = UNIT_LABEL[currentProduct];
-      const cores = Object.keys(NEST[currentProduct]);
+      const cores = sortedCores(Object.keys(NEST[currentProduct]));
 
       const heroEl = document.getElementById('hero-total');
       let total = 0;
@@ -1316,7 +1337,7 @@
         tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado (un)</th><th>Estimado hoje (${unitLabel})</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         const today = new Date(); today.setHours(0,0,0,0);
-        Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam)).forEach(tam => {
+        sortedTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam))).forEach(tam => {
           const rec = NEST[currentProduct][cor][tam];
           const area = areaPerUnitFor(currentProduct, tam);
           const src = area !== null ? rec.units.map(u => u*area) : rec.units;
@@ -1395,6 +1416,7 @@
   }
   init();
 })();
+
 
 
 
