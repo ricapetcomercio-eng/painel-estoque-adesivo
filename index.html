@@ -329,6 +329,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -742,6 +743,20 @@
     const M2 = data.m2Monthly;
     const REVENUE = data.revMonthly;
     const NEST = data.nest;
+
+    // Combinações de Produto/Cor/Medida que sabemos ser inválidas (ex: erro de
+    // classificação num relatório de venda) e que nunca devem aparecer no painel,
+    // mesmo que voltem a surgir em um upload futuro.
+    const COMBOS_EXCLUIDOS = [
+      { produto: "Degrau", cor: "Grafite", medida: "P" }
+    ];
+    COMBOS_EXCLUIDOS.forEach(({produto, cor, medida}) => {
+      if(NEST[produto] && NEST[produto][cor] && NEST[produto][cor][medida]){
+        delete NEST[produto][cor][medida];
+        if(Object.keys(NEST[produto][cor]).length === 0) delete NEST[produto][cor];
+      }
+    });
+
     // Garante que todo produto da lista tenha ao menos uma entrada vazia,
     // mesmo que ainda não tenha aparecido em nenhum relatório processado.
     TARGET_PRODUCTS.forEach(p => {
@@ -1433,6 +1448,7 @@
   }
   init();
 })();
+
 
 
 
