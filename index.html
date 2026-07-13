@@ -326,6 +326,9 @@
 
 
 
+
+
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -1359,8 +1362,9 @@
           const estoqueContadoConvertido = stockUnitsToM2(st, currentProduct, tam);
           const tamLabel = tam === '-' ? 'Estoque geral' : tam;
           const tr = document.createElement('tr');
+          const tituloUn = (valorM2) => (area && area > 0) ? `≈ ${fmt(valorM2/area,0)} un` : '';
           if(avgDaily <= 0){
-            tr.innerHTML = `<td>${tamLabel}</td><td>0</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueContadoConvertido,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td>sem consumo</td>`;
+            tr.innerHTML = `<td>${tamLabel}</td><td>0</td><td>${fmt(estoqueContadoUn,0)}</td><td title="${tituloUn(estoqueContadoConvertido)}">${fmt(estoqueContadoConvertido,unitLabel==='m²'?1:0)}</td><td>—</td><td>—</td><td>sem consumo</td>`;
           } else {
             const estoqueEfetivo = effectiveStock(st, avgDaily, currentProduct, tam);
             const diasRestantes = estoqueEfetivo / avgDaily;
@@ -1370,7 +1374,8 @@
             let badgeBg = 'var(--success-bg)', badgeText = 'var(--success-text)';
             if(compraDate <= today){ badgeBg='var(--danger-bg)'; badgeText='var(--danger-text)'; }
             else if((compraDate-today)/86400000 <= 7){ badgeBg='var(--warning-bg)'; badgeText='var(--warning-text)'; }
-            tr.innerHTML = `<td>${tamLabel}</td><td>${fmt(avgDaily,2)}</td><td>${fmt(estoqueContadoUn,0)}</td><td>${fmt(estoqueEfetivo,unitLabel==='m²'?1:0)}</td><td>${fmt(diasRestantes,0)}</td><td><span class="badge" style="background:${badgeBg};color:${badgeText};">${fmtDate(compraDate)}</span></td><td style="font-weight:600;">${fmt(qtd,unitLabel==='m²'?1:0)}</td>`;
+            const tituloComprarAte = `${fmt(qtd,unitLabel==='m²'?1:0)} ${unitLabel} a comprar${tituloUn(qtd) ? ' (' + tituloUn(qtd) + ')' : ''}`;
+            tr.innerHTML = `<td>${tamLabel}</td><td title="${tituloUn(avgDaily)}${tituloUn(avgDaily)?' por dia':''}">${fmt(avgDaily,2)}</td><td>${fmt(estoqueContadoUn,0)}</td><td title="${tituloUn(estoqueEfetivo)}">${fmt(estoqueEfetivo,unitLabel==='m²'?1:0)}</td><td>${fmt(diasRestantes,0)}</td><td><span class="badge" style="background:${badgeBg};color:${badgeText};" title="${tituloComprarAte}">${fmtDate(compraDate)}</span></td><td style="font-weight:600;" title="${tituloUn(qtd)}">${fmt(qtd,unitLabel==='m²'?1:0)}</td>`;
           }
           tbody.appendChild(tr);
         });
@@ -1428,6 +1433,9 @@
   }
   init();
 })();
+
+
+
 
 
 
