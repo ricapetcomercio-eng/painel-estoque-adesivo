@@ -325,6 +325,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -1337,7 +1338,15 @@
 
         const detail = document.createElement('div'); detail.className = 'cor-result-detail';
         const tbl = document.createElement('table'); tbl.className = 'detail-tbl';
-        tbl.innerHTML = `<thead><tr><th>Medida</th><th>Consumo/dia</th><th>Contado (un)</th><th>Estimado hoje (${unitLabel})</th><th>Dias restantes</th><th>Comprar até</th><th>Qtd a comprar</th></tr></thead><tbody></tbody>`;
+        tbl.innerHTML = `<thead><tr>
+          <th title="O tamanho específico dessa peça/corte.">Medida</th>
+          <th title="Quanto você vende, em média, por dia dessa medida (calculado a partir do período escolhido no Passo 2).">Consumo/dia (${unitLabel})</th>
+          <th title="Quantidade em unidades que você contou e digitou na última contagem de estoque.">Contado (un)</th>
+          <th title="O estoque contado, já convertido para ${unitLabel} e descontando o consumo desde a última contagem até hoje.">Estimado hoje (${unitLabel})</th>
+          <th title="Em quantos dias esse estoque estimado deve acabar, no ritmo atual de vendas.">Dias restantes</th>
+          <th title="Data limite para fazer o pedido ao fornecedor, já considerando o prazo de entrega (lead time) — depois dessa data o estoque pode zerar antes do pedido novo chegar.">Comprar até</th>
+          <th title="Quanto pedir agora para cobrir o consumo até a próxima entrega, já descontando o que ainda resta.">Qtd a comprar</th>
+        </tr></thead><tbody></tbody>`;
         const tbody = tbl.querySelector('tbody');
         const today = new Date(); today.setHours(0,0,0,0);
         sortedTamanhos(Object.keys(NEST[currentProduct][cor]).filter(tam => !ROLL_TAMS.includes(tam))).forEach(tam => {
@@ -1419,6 +1428,7 @@
   }
   init();
 })();
+
 
 
 
