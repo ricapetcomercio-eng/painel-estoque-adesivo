@@ -324,6 +324,7 @@
 
 
 
+
 (function(){
   // ===================================================================
   // CONFIGURAÇÃO DO ARMAZENAMENTO COMPARTILHADO (jsonbin.io — gratuito)
@@ -333,8 +334,8 @@
   // 3. Crie um bin novo (pode ser um objeto vazio {} ) e copie o Bin ID
   //    da URL (ex: 64f1a2b3c4d5e6f7a8b9c0d1) e cole abaixo.
   // Sem isso preenchido, o painel funciona só nesta sessão (não compartilha).
-  const JSONBIN_API_KEY = '$2a$10$ND.x/bv40pDvHNXaXQjsN.C3TgS1H4FC5sMfok6JsA/h2Z9xk5lL.';
-  const JSONBIN_BIN_ID = '6a490946da38895dfe2d2c9a';
+  const JSONBIN_API_KEY = 'COLE_SUA_X-MASTER-KEY_AQUI';
+  const JSONBIN_BIN_ID = 'COLE_O_BIN_ID_AQUI';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
   function jsonbinConfigured(){
@@ -365,7 +366,7 @@
     current[key] = value;
     return jsonbinPut(current);
   }
-  const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Caminha 02","Casinha 03","Casinha 09","Casinha 12","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Poste Arranhador","Rampa 6mm"];
+  const TARGET_PRODUCTS = ["Arranhador Adesivo","Arranhador Adesivo Gato","Arranhador Cara de Gato","Arranhador Parede","Arranhador Rampa","Arranhador Túnel","Brinquedo Interativo","Casinha 09","Degrau","Nicho Grande","Nicho Playground","Piso Carpete","Playground","Playground 02","Playground 03","Playground 04","Playground 05","Playground 06","Rampa 6mm"];
   const COR_HEX = { "Cinza":"#9e9e94","Bege":"#d9c9a3","Marrom":"#6b4423","Grafite":"#3a3a3a","Preto":"#1a1a1a","Azul":"#2a5fa8","Chumbo":"#5a5f66" };
   const ROLL_COLORS = ["Azul","Bege","Chumbo","Cinza","Grafite","Marrom","Preto"];
   const TAM_LABEL = { "100x7000":"1m × 70m (rolo)", "50x7000":"50cm × 70m (rolo)" };
@@ -373,7 +374,9 @@
   const MESES_PT = {'janeiro':0,'fevereiro':1,'março':2,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
 
   // Produtos que NÃO consomem adesivo (peça 100% pronta, sem material de rolo).
-  const NO_ADHESIVE_PRODUCTS = ["Caminha 02","Casinha 03","Casinha 12","Poste Arranhador"];
+  // Caminha 02, Casinha 03, Casinha 12 e Poste Arranhador foram removidos do painel
+  // inteiramente (não usam adesivo e não são mais acompanhados aqui).
+  const NO_ADHESIVE_PRODUCTS = [];
 
   // Área fixa de adesivo consumida por unidade vendida (m² por peça), para produtos
   // que não variam de medida entre as vendas — baseado na tabela informada.
@@ -1416,6 +1419,7 @@
   }
   init();
 })();
+
 
 
 
