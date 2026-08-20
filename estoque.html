@@ -272,14 +272,101 @@
   let currentProduct = null;
   let currentCor = null;
 
+  // Células editadas neste aparelho desde o último salvamento bem-sucedido.
+  // flushSave usa isto para mesclar só o que mudou aqui com o que já estiver
+  // salvo (possivelmente alterado por outro aparelho), em vez de sobrescrever
+  // a árvore inteira com o snapshot (potencialmente desatualizado) carregado
+  // no início da sessão — era isso que fazia um celular "apagar" a contagem
+  // que outro tinha acabado de salvar.
+  let dirtyStock = new Set(); // chave "produto|cor|medida"
+  let dirtyRolls = new Set(); // chave "cor|medida"
+
   const saveStockDebounced = debounce(flushSave, 500);
+
+  let saveInFlight = false;
+  let saveQueued = false;
 
   async function flushSave(){
     if(!jsonbinConfigured()){ setSavePill('unavailable'); return; }
+    if(saveInFlight){ saveQueued = true; return; }
+    saveInFlight = true;
+    try {
+      do {
+        saveQueued = false;
+        await flushSaveOnce();
+      } while(saveQueued);
+    } finally {
+      saveInFlight = false;
+    }
+  }
+
+  async function flushSaveOnce(){
     setSavePill('saving');
-    const payload = { leadTimeDays, stock: STATE, rolls: ROLL_STATE, updatedAt: new Date().toISOString() };
+
+    // Congela as edições feitas até agora; qualquer edição que aconteça
+    // durante o salvamento fica marcada de novo e entra na próxima rodada.
+    const pendingStock = Array.from(dirtyStock);
+    const pendingRolls = Array.from(dirtyRolls);
+    dirtyStock.clear();
+    dirtyRolls.clear();
+
+    const record = await jsonbinGet();
+    const remoteEstoque = (record && record.estoque) || {};
+    const mergedStock = remoteEstoque.stock ? JSON.parse(JSON.stringify(remoteEstoque.stock)) : {};
+    const mergedRolls = remoteEstoque.rolls ? JSON.parse(JSON.stringify(remoteEstoque.rolls)) : {};
+
+    pendingStock.forEach(key => {
+      const [produto, cor, tam] = key.split('|');
+      if(!mergedStock[produto]) mergedStock[produto] = {};
+      if(!mergedStock[produto][cor]) mergedStock[produto][cor] = {};
+      mergedStock[produto][cor][tam] = STATE[produto][cor][tam];
+    });
+    pendingRolls.forEach(key => {
+      const [cor, tam] = key.split('|');
+      if(!mergedRolls[cor]) mergedRolls[cor] = {};
+      mergedRolls[cor][tam] = ROLL_STATE[cor][tam];
+    });
+    const mergedLeadTime = typeof remoteEstoque.leadTimeDays === 'number' ? remoteEstoque.leadTimeDays : leadTimeDays;
+
+    const payload = { leadTimeDays: mergedLeadTime, stock: mergedStock, rolls: mergedRolls, updatedAt: new Date().toISOString() };
     const ok = await jsonbinUpdatePart('estoque', payload);
-    setSavePill(ok ? 'saved' : 'error');
+
+    if(ok){
+      leadTimeDays = mergedLeadTime;
+      absorverStockRemoto(mergedStock, mergedRolls);
+      setSavePill('saved');
+    } else {
+      pendingStock.forEach(k => dirtyStock.add(k));
+      pendingRolls.forEach(k => dirtyRolls.add(k));
+      setSavePill('error');
+    }
+  }
+
+  // Traz para o estado local qualquer célula que outro aparelho tenha salvo
+  // enquanto esta sessão estava aberta — exceto as que este aparelho acabou
+  // de editar (dirty de novo), para não sobrescrever uma digitação em
+  // andamento com um valor mais antigo. Não redesenha a tela sozinho: só
+  // evita que o próximo salvamento local mande um dado velho pra frente.
+  function absorverStockRemoto(mergedStock, mergedRolls){
+    TARGET_PRODUCTS_RAW.forEach(p => {
+      Object.keys(CATALOG[p]).forEach(cor => {
+        (CATALOG[p][cor] || []).forEach(tam => {
+          if(ROLL_TAMS.includes(tam)) return;
+          const key = p + '|' + cor + '|' + tam;
+          if(dirtyStock.has(key)) return;
+          const remoto = mergedStock[p] && mergedStock[p][cor] && mergedStock[p][cor][tam];
+          if(remoto) STATE[p][cor][tam] = { proprio: remoto.proprio || 0, full: remoto.full || 0, atualizadoEm: remoto.atualizadoEm || null };
+        });
+      });
+    });
+    ROLL_COLORS.forEach(cor => {
+      ROLL_TAMS.forEach(tam => {
+        const key = cor + '|' + tam;
+        if(dirtyRolls.has(key)) return;
+        const remoto = mergedRolls[cor] && mergedRolls[cor][tam];
+        if(remoto) ROLL_STATE[cor][tam] = { proprio: remoto.proprio || 0, full: remoto.full || 0, atualizadoEm: remoto.atualizadoEm || null };
+      });
+    });
   }
 
   function progressoCor(produto, cor){
@@ -360,6 +447,7 @@
         const marcarContado = () => {
           st.proprio = parseFloat(proprioInput.value) || 0;
           st.atualizadoEm = todayStr();
+          dirtyRolls.add(currentCor + '|' + tam);
           card.classList.remove('pendente'); card.classList.add('feito');
           card.querySelector('.status-badge').textContent = '✓ Contado hoje';
           renderColorPills();
@@ -399,6 +487,7 @@
       const marcarContado = () => {
         st.proprio = parseFloat(proprioInput.value) || 0;
         st.atualizadoEm = todayStr();
+        dirtyStock.add(currentProduct + '|' + currentCor + '|' + tam);
         card.classList.remove('pendente'); card.classList.add('feito');
         card.querySelector('.status-badge').textContent = '✓ Contado hoje';
         renderColorPills();
