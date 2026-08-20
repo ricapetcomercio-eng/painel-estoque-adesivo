@@ -470,23 +470,48 @@
     return !!(GOOGLE_SHEETS_WEBAPP_URL && GOOGLE_SHEETS_WEBAPP_URL.indexOf('COLE_') !== 0);
   }
 
+  // Ordenação de medida para a planilha: numérica por área (ex: 50x30 antes de
+  // 70x50) e P/M/G na ordem de tamanho de roupa, em vez de ordem alfabética crua.
+  const CLOTHING_ORDER_SHEET = ['PP','P','M','G','GG','XG','XGG','XXG'];
+  function tamSortKeyForSheet(tam){
+    if(tam === '-') return [2, 0, tam];
+    const m = String(tam).match(/^(\d+)[xX](\d+)/);
+    if(m) return [0, (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100), tam];
+    const idxRoupa = CLOTHING_ORDER_SHEET.indexOf(String(tam).toUpperCase());
+    if(idxRoupa !== -1) return [1, idxRoupa, tam];
+    return [3, 0, String(tam).toLowerCase()];
+  }
+
   function buildRowsForSheet(){
     const rows = [];
     TARGET_PRODUCTS_RAW.forEach(p => {
       Object.keys(STATE[p] || {}).forEach(cor => {
         Object.keys(STATE[p][cor]).forEach(tam => {
           const st = STATE[p][cor][tam];
-          rows.push({ produto: p, cor, medida: tam === '-' ? 'única' : tam, ricapet: st.proprio, full: st.full });
+          rows.push({ produto: p, cor, tam, medida: tam === '-' ? 'única' : tam, ricapet: st.proprio, full: st.full, valor: precoFor(p, cor, tam) });
         });
       });
     });
     ROLL_COLORS.forEach(cor => {
       ROLL_TAMS.forEach(tam => {
         const st = ROLL_STATE[cor][tam];
-        rows.push({ produto: ROLL_PSEUDO_PRODUCT, cor, medida: TAM_LABEL[tam], ricapet: st.proprio, full: 0 });
+        rows.push({ produto: ROLL_PSEUDO_PRODUCT, cor, tam, medida: TAM_LABEL[tam], ricapet: st.proprio, full: 0, valor: null });
       });
     });
-    return rows;
+    // Ordena por Produto, Medida, Cor e Valor, nessa ordem de prioridade.
+    rows.sort((a, b) => {
+      const porProduto = a.produto.localeCompare(b.produto, 'pt-BR');
+      if(porProduto !== 0) return porProduto;
+      const ka = tamSortKeyForSheet(a.tam), kb = tamSortKeyForSheet(b.tam);
+      if(ka[0] !== kb[0]) return ka[0] - kb[0];
+      if(ka[1] !== kb[1]) return ka[1] - kb[1];
+      const porMedida = String(ka[2]).localeCompare(String(kb[2]), 'pt-BR');
+      if(porMedida !== 0) return porMedida;
+      const porCor = a.cor.localeCompare(b.cor, 'pt-BR');
+      if(porCor !== 0) return porCor;
+      return (a.valor || 0) - (b.valor || 0);
+    });
+    return rows.map(({ produto, cor, medida, ricapet, full }) => ({ produto, cor, medida, ricapet, full }));
   }
 
   async function gravarNoSheets(){
