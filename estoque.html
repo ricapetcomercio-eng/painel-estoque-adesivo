@@ -38,6 +38,8 @@
   }
   .gravar-btn:active { background: var(--accent-dark); }
   .gravar-btn:disabled { background: var(--border); color: var(--ink-muted); }
+  .saldo-inicial-btn { margin-top: 10px; background: var(--ink-soft); font-size: 13px; padding: 11px; }
+  .saldo-inicial-btn:active { background: var(--ink); }
   .gravar-status { text-align: center; font-size: 12px; margin-top: 8px; min-height: 15px; }
   .gravar-status.ok { color: var(--success-solid); font-weight: 600; }
   .gravar-status.err { color: var(--danger-solid); font-weight: 600; }
@@ -155,6 +157,8 @@
 <div class="gravar-bar">
   <button id="gravar-btn" class="gravar-btn">Gravar no Google Sheets</button>
   <div id="gravar-status" class="gravar-status"></div>
+  <button id="saldo-inicial-btn" class="gravar-btn saldo-inicial-btn">Usar esta contagem como saldo inicial do sistema automático</button>
+  <div id="saldo-inicial-status" class="gravar-status"></div>
 </div>
 
 
@@ -638,6 +642,44 @@
     }
   }
   document.getElementById('gravar-btn').addEventListener('click', gravarNoSheets);
+
+  // ===================================================================
+  // Saldo inicial do sistema automático (painel-entrega-turbo)
+  // ===================================================================
+  // Manda a contagem física atual pro endpoint que define o saldo inicial
+  // do estoque que passa a descer sozinho a cada venda (ver
+  // lib/estoqueSaldo.js no projeto painel-entrega-turbo). O secret aqui é
+  // um secret PRÓPRIO desse endpoint (não o CRON_SECRET do outro projeto),
+  // pensado pra ficar embutido num arquivo client-side como este.
+  const PAINEL_ENTREGA_TURBO_ESTOQUE_URL = 'https://painel-entrega-turbo.vercel.app/api/debug?tipo=importar-contagem-fisica&secret=631ac83f9b7c5ae518c3dfe378b09ba64cd96aaba9c87f5f';
+
+  async function enviarComoSaldoInicial(){
+    const statusEl = document.getElementById('saldo-inicial-status');
+    const btn = document.getElementById('saldo-inicial-btn');
+    btn.disabled = true;
+    statusEl.textContent = 'Salvando contagem e definindo como saldo inicial…';
+    statusEl.className = 'gravar-status';
+    try {
+      await flushSave(); // garante que a contagem atual já está salva antes de importar
+      const resp = await fetch(PAINEL_ENTREGA_TURBO_ESTOQUE_URL);
+      let json = {};
+      try { json = await resp.json(); } catch(e){ /* ignora corpo vazio/errado */ }
+      if(resp.ok && json.ok){
+        statusEl.textContent = `✓ Saldo inicial definido para ${json.atualizados} produto(s) às ` + new Date().toLocaleTimeString('pt-BR');
+        statusEl.className = 'gravar-status ok';
+      } else {
+        statusEl.textContent = '⚠ Erro ao definir saldo inicial: ' + (json.error || resp.status);
+        statusEl.className = 'gravar-status err';
+      }
+    } catch(e){
+      console.error('Erro ao definir saldo inicial:', e);
+      statusEl.textContent = '⚠ Erro de conexão ao definir saldo inicial.';
+      statusEl.className = 'gravar-status err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('saldo-inicial-btn').addEventListener('click', enviarComoSaldoInicial);
 
   init();
 })();
