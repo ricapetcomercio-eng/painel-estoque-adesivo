@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saldo de Estoque — Ricapet · Thapets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F3F6F5; --surface: #FFFFFF; --surface-2: #EAEFED;
+    --ink: #15211D; --ink-soft: #4E5D57; --ink-muted: #8A9791; --border: #DCE3DF;
+    --accent: #0B6E8F; --accent-dark: #084F66; --accent-light: #E3F1F5;
+    --danger-bg: #FCEBEB; --danger-text: #8A2A24; --danger-solid: #C94A3F;
+    --warning-bg: #FBF0DC; --warning-text: #6B4308;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+  .shell { max-width: 900px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  .sub { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 20px; max-width: 60ch; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .kpi .k-label { font-size: 11px; color: var(--ink-muted); margin-bottom: 4px; }
+  .kpi .k-value { font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+  .kpi.warn .k-value { color: var(--warning-text); }
+  .kpi.danger .k-value { color: var(--danger-text); }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar input[type="text"] {
+    flex: 1; min-width: 180px; padding: 9px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: var(--font-body); background: var(--surface);
+  }
+  .refresh-btn, .checkbox-label {
+    font-size: 13px; padding: 9px 14px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--surface); cursor: pointer; color: var(--ink-soft); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent-dark); }
+  .checkbox-label input { margin: 0; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 9px 12px; font-size: 13.5px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface-2); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--font-mono); text-align: right; font-weight: 600; }
+  tr.negativo td.num { color: var(--danger-text); }
+  tr.negativo { background: var(--danger-bg); }
+  tr.zerado td.num { color: var(--warning-text); }
+  .updated-cell { color: var(--ink-muted); font-size: 12px; }
+
+  .empty-note, .error-note, .loading-note { text-align: center; padding: 30px; color: var(--ink-muted); font-size: 14px; }
+  .error-note { color: var(--danger-text); }
+
+  footer.foot { text-align: center; font-size: 12px; color: var(--ink-muted); margin-top: 24px; }
+  footer.foot a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <h1>Saldo de Estoque</h1>
+  <p class="sub">Saldo calculado automaticamente: começa da última contagem física importada e desce sozinho a cada venda registrada (Mercado Livre / Shopee), voltando a subir se o pedido for cancelado ou devolvido depois.</p>
+
+  <div class="kpi-row" id="kpi-row"></div>
+
+  <div class="toolbar">
+    <input type="text" id="filtro" placeholder="Filtrar por produto ou cor…">
+    <label class="checkbox-label"><input type="checkbox" id="so-negativos"> Só saldo ≤ 0</label>
+    <button class="refresh-btn" id="refresh-btn">↻ Atualizar</button>
+  </div>
+
+  <div id="conteudo"><div class="loading-note">Carregando…</div></div>
+
+  <footer class="foot">
+    Dados de <a href="https://painel-entrega-turbo.vercel.app" target="_blank" rel="noopener">painel-entrega-turbo</a> ·
+    Contagem física em <a href="estoque.html">estoque.html</a> ·
+    Visão de vendas em <a href="index.html">index.html</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const ESTOQUE_SALDO_URL = 'https://painel-entrega-turbo.vercel.app/api/debug?tipo=estoque-saldo&secret=631ac83f9b7c5ae518c3dfe378b09ba64cd96aaba9c87f5f';
+
+  let ultimoDado = null;
+
+  function fmtData(iso){
+    if(!iso) return '—';
+    try { return new Date(iso).toLocaleString('pt-BR'); } catch(e){ return iso; }
+  }
+
+  const CLOTHING_ORDER = ['PP','P','M','G','GG','XG','XGG','XXG'];
+  function tamSortKey(tam){
+    if(tam === '-') return [2, 0, tam];
+    const m = String(tam).match(/^(\d+)[xX](\d+)/);
+    if(m) return [0, (parseInt(m[1],10)/100) * (parseInt(m[2],10)/100), tam];
+    const idx = CLOTHING_ORDER.indexOf(String(tam).toUpperCase());
+    if(idx !== -1) return [1, idx, tam];
+    return [3, 0, String(tam).toLowerCase()];
+  }
+
+  function ordenar(linhas){
+    return [...linhas].sort((a,b) => {
+      const p = a.produto.localeCompare(b.produto, 'pt-BR'); if(p !== 0) return p;
+      const ka = tamSortKey(a.tamanho), kb = tamSortKey(b.tamanho);
+      if(ka[0] !== kb[0]) return ka[0]-kb[0];
+      if(ka[1] !== kb[1]) return ka[1]-kb[1];
+      const t = String(ka[2]).localeCompare(String(kb[2]), 'pt-BR'); if(t !== 0) return t;
+      return a.cor.localeCompare(b.cor, 'pt-BR');
+    });
+  }
+
+  function renderKpis(dado){
+    const negativos = dado.saldo.filter(r => r.saldo < 0).length;
+    document.getElementById('kpi-row').innerHTML = `
+      <div class="kpi"><div class="k-label">Produtos/cor/tamanho</div><div class="k-value">${dado.total_produtos}</div></div>
+      <div class="kpi ${negativos > 0 ? 'danger' : ''}"><div class="k-label">Com saldo negativo</div><div class="k-value">${negativos}</div></div>
+      <div class="kpi ${dado.vendas_nao_mapeadas > 0 ? 'warn' : ''}"><div class="k-label">Vendas sem mapeamento</div><div class="k-value">${dado.vendas_nao_mapeadas}</div></div>
+    `;
+  }
+
+  function renderTabela(){
+    if(!ultimoDado){ return; }
+    const filtro = document.getElementById('filtro').value.trim().toLowerCase();
+    const soNegativos = document.getElementById('so-negativos').checked;
+    let linhas = ordenar(ultimoDado.saldo);
+    if(filtro){
+      linhas = linhas.filter(r => (r.produto + ' ' + r.cor).toLowerCase().includes(filtro));
+    }
+    if(soNegativos){
+      linhas = linhas.filter(r => r.saldo <= 0);
+    }
+    const wrap = document.getElementById('conteudo');
+    if(linhas.length === 0){
+      wrap.innerHTML = '<div class="empty-note">Nenhum produto encontrado com esse filtro.</div>';
+      return;
+    }
+    const linhasHtml = linhas.map(r => {
+      const classe = r.saldo < 0 ? 'negativo' : (r.saldo === 0 ? 'zerado' : '');
+      const tamanhoLabel = r.tamanho === '-' ? 'única' : r.tamanho;
+      return `<tr class="${classe}">
+        <td>${r.produto}</td>
+        <td>${r.cor}</td>
+        <td>${tamanhoLabel}</td>
+        <td class="num">${r.saldo}</td>
+        <td class="updated-cell">${fmtData(r.atualizado_em)}</td>
+      </tr>`;
+    }).join('');
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Produto</th><th>Cor</th><th>Tamanho</th><th>Saldo</th><th>Atualizado</th></tr></thead>
+        <tbody>${linhasHtml}</tbody>
+      </table>
+    `;
+  }
+
+  async function carregar(){
+    document.getElementById('conteudo').innerHTML = '<div class="loading-note">Carregando…</div>';
+    try {
+      const resp = await fetch(ESTOQUE_SALDO_URL);
+      const json = await resp.json();
+      if(!resp.ok || !json.ok) throw new Error(json.error || ('HTTP ' + resp.status));
+      ultimoDado = json;
+      renderKpis(json);
+      renderTabela();
+    } catch(e){
+      console.error('Erro ao carregar saldo:', e);
+      document.getElementById('conteudo').innerHTML = '<div class="error-note">⚠ Erro ao carregar o saldo: ' + (e.message || e) + '</div>';
+    }
+  }
+
+  document.getElementById('refresh-btn').addEventListener('click', carregar);
+  document.getElementById('filtro').addEventListener('input', renderTabela);
+  document.getElementById('so-negativos').addEventListener('change', renderTabela);
+
+  carregar();
+})();
+</script>
+</body>
+</html>
