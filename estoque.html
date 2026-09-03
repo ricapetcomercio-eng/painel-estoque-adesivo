@@ -187,7 +187,16 @@
   async function jsonbinGet(){
     if(!jsonbinConfigured()) return null;
     try {
-      const resp = await fetch(JSONBIN_BASE + '/latest', { headers: { 'X-Master-Key': JSONBIN_API_KEY } });
+      // cache:'no-store' + parametro de cache-busting: sem isso, o navegador (ou um
+      // proxy no meio do caminho) pode devolver uma resposta antiga desse mesmo GET
+      // em vez de ir buscar no servidor. Como flushSaveOnce usa esse retorno pra
+      // decidir o que "absorver" de volta pro estado local (absorverStockRemoto),
+      // uma leitura velha fazia um campo recem-salvo aparentar ter "voltado" pro
+      // valor de antes assim que qualquer outro campo era salvo em seguida.
+      const resp = await fetch(JSONBIN_BASE + '/latest?_=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'X-Master-Key': JSONBIN_API_KEY, 'Cache-Control': 'no-cache' }
+      });
       if(!resp.ok) return null;
       const json = await resp.json();
       return json.record || null;
