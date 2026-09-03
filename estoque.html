@@ -294,6 +294,44 @@
   let dirtyStock = new Set(); // chave "produto|cor|medida"
   let dirtyRolls = new Set(); // chave "cor|medida"
 
+  // ===================================================================
+  // Rascunho local (localStorage) de edições ainda não confirmadas como
+  // salvas no servidor. O Safari no iPhone recarrega abas em segundo plano
+  // com bastante frequência pra liberar memória, e isso zera STATE/dirtyStock
+  // inteiros na hora -- se acontecer entre uma digitação e o salvamento
+  // terminar, a contagem digitada "volta" para o valor antigo sem aviso.
+  // Gravando cada edição aqui (sincronamente, a cada tecla) e reaplicando no
+  // init(), a contagem sobrevive a esse recarregamento, seja qual for a causa.
+  const DRAFT_KEY = 'estoque_ricapet_rascunho_v1';
+  function lerRascunho(){
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? JSON.parse(raw) : { stock: {}, rolls: {} };
+    } catch(e){ return { stock: {}, rolls: {} }; }
+  }
+  function salvarRascunhoStock(key, st){
+    try {
+      const draft = lerRascunho();
+      draft.stock[key] = st;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch(e){ /* localStorage indisponível: segue sem rascunho */ }
+  }
+  function salvarRascunhoRoll(key, st){
+    try {
+      const draft = lerRascunho();
+      draft.rolls[key] = st;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch(e){ /* localStorage indisponível: segue sem rascunho */ }
+  }
+  function limparRascunho(keysStock, keysRolls){
+    try {
+      const draft = lerRascunho();
+      keysStock.forEach(k => delete draft.stock[k]);
+      keysRolls.forEach(k => delete draft.rolls[k]);
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch(e){ /* localStorage indisponível: segue sem rascunho */ }
+  }
+
   const saveStockDebounced = debounce(flushSave, 500);
 
   let saveInFlight = false;
@@ -354,6 +392,7 @@
     if(ok){
       leadTimeDays = mergedLeadTime;
       absorverStockRemoto(mergedStock, mergedRolls);
+      limparRascunho(pendingStock, pendingRolls);
       setSavePill('saved');
     } else {
       pendingStock.forEach(k => dirtyStock.add(k));
@@ -468,6 +507,7 @@
           st.proprio = parseFloat(proprioInput.value) || 0;
           st.atualizadoEm = todayStr();
           dirtyRolls.add(currentCor + '|' + tam);
+          salvarRascunhoRoll(currentCor + '|' + tam, st);
           card.classList.remove('pendente'); card.classList.add('feito');
           card.querySelector('.status-badge').textContent = '✓ Contado hoje';
           renderColorPills();
@@ -508,6 +548,7 @@
         st.proprio = parseFloat(proprioInput.value) || 0;
         st.atualizadoEm = todayStr();
         dirtyStock.add(currentProduct + '|' + currentCor + '|' + tam);
+        salvarRascunhoStock(currentProduct + '|' + currentCor + '|' + tam, st);
         card.classList.remove('pendente'); card.classList.add('feito');
         card.querySelector('.status-badge').textContent = '✓ Contado hoje';
         renderColorPills();
@@ -556,12 +597,37 @@
 
     leadTimeDays = (estoque && typeof estoque.leadTimeDays === 'number') ? estoque.leadTimeDays : 15;
 
+    // Reaplica por cima qualquer edição que ainda não tinha sido confirmada como
+    // salva antes desta carga (ver salvarRascunhoStock/salvarRascunhoRoll acima) —
+    // é o que faz uma contagem digitada sobreviver a um recarregamento inesperado
+    // da página (comum no Safari do iPhone) em vez de "voltar" pro valor do servidor.
+    const rascunho = lerRascunho();
+    let rascunhoReaplicado = false;
+    Object.keys(rascunho.stock || {}).forEach(key => {
+      const [p, cor, tam] = key.split('|');
+      if(STATE[p] && STATE[p][cor] && (tam in STATE[p][cor])){
+        STATE[p][cor][tam] = rascunho.stock[key];
+        dirtyStock.add(key);
+        rascunhoReaplicado = true;
+      }
+    });
+    Object.keys(rascunho.rolls || {}).forEach(key => {
+      const [cor, tam] = key.split('|');
+      if(ROLL_STATE[cor] && (tam in ROLL_STATE[cor])){
+        ROLL_STATE[cor][tam] = rascunho.rolls[key];
+        dirtyRolls.add(key);
+        rascunhoReaplicado = true;
+      }
+    });
+
     currentProduct = TARGET_PRODUCTS[0];
 
     renderProductSelect();
     renderColorPills();
     renderMedidaList();
     setSavePill(jsonbinConfigured() ? 'saved' : 'unavailable');
+
+    if(rascunhoReaplicado) flushSave();
   }
 
   // ===================================================================
