@@ -204,11 +204,6 @@
       return resp.ok;
     } catch(e){ console.error('Erro ao salvar jsonbin:', e); return false; }
   }
-  async function jsonbinUpdatePart(key, value){
-    const current = (await jsonbinGet()) || {};
-    current[key] = value;
-    return jsonbinPut(current);
-  }
 
   // Catálogo completo de produtos/cores/tamanhos da empresa (planilha Produtos_Estoque.xlsx).
   // Este app cobre TODO o estoque — diferente do painel de gestão, que só acompanha
@@ -338,7 +333,14 @@
     const mergedLeadTime = typeof remoteEstoque.leadTimeDays === 'number' ? remoteEstoque.leadTimeDays : leadTimeDays;
 
     const payload = { leadTimeDays: mergedLeadTime, stock: mergedStock, rolls: mergedRolls, updatedAt: new Date().toISOString() };
-    const ok = await jsonbinUpdatePart('estoque', payload);
+    // Reaproveita o `record` já buscado acima (jsonbinGet no início desta função) em vez de
+    // buscar de novo (era o que jsonbinUpdatePart fazia): um segundo GET nesse meio-tempo podia
+    // voltar desatualizado (ex.: outro aparelho/aba salvando ao mesmo tempo) e, como o valor era
+    // usado sem mesclar, o PUT final sobrescrevia o campo "estoque" inteiro com esse instantâneo
+    // velho -- é isso que fazia uma contagem recém-digitada "voltar" para um valor antigo.
+    const fullRecord = record || {};
+    fullRecord.estoque = payload;
+    const ok = await jsonbinPut(fullRecord);
 
     if(ok){
       leadTimeDays = mergedLeadTime;
