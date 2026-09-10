@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel de Reposição — Ricapet · Thapets</title>
+<script>
+  // Dentro de um iframe (ex.: aberto pelo painel-entrega-turbo)? O painel
+  // que hospeda o iframe já mostra a sidebar — não repete aqui.
+  if (window.self !== window.top) {
+    document.documentElement.classList.add('embutido');
+  }
+</script>
 <style>
   :root {
     --bg: #F3F6F5;
@@ -66,6 +73,8 @@
   .sidebar-footer-name { font-size: 12px; font-weight: 700; color: var(--ink); }
   .sidebar-footer-sub { font-size: 11px; color: var(--ink-muted); }
   .conteudo-principal { margin-left: 240px; }
+  html.embutido .sidebar { display: none; }
+  html.embutido .conteudo-principal { margin-left: 0; }
   @media (max-width: 900px) {
     .sidebar { position: static; width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
     .sidebar-brand, .sidebar-footer, .sidebar-separador { display: none; }
