@@ -104,7 +104,7 @@
 
   /* Barra cheia no topo do conteúdo, mesmo azul-marinho da sidebar e do
      header do painel de Ponto — igual ao topbar do painel-entrega-turbo. */
-  .topbar-full { background: var(--sidebar-bg); margin-bottom: 20px; min-height: 64px; box-sizing: border-box; }
+  .topbar-full { background: var(--sidebar-bg); margin-bottom: 20px; min-height: 64px; box-sizing: border-box; position: sticky; top: 0; z-index: 5; }
 
   .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; }
   .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 16px; }
