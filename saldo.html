@@ -45,6 +45,14 @@
   .sidebar-brand-name { font-size: 14px; font-weight: 800; color: var(--sidebar-text); line-height: 1.2; }
   .sidebar-brand-sub { font-size: 11px; color: var(--sidebar-muted); }
   .sidebar-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sidebar-muted); padding: 0 10px; margin-bottom: 10px; }
+  .sidebar-titulo-com-editar { display: flex; align-items: center; justify-content: space-between; }
+  .sidebar-editar-btn {
+    background: none; border: none; color: var(--sidebar-muted); cursor: pointer;
+    font-size: 12px; opacity: 0.35; padding: 2px 5px; border-radius: 4px; line-height: 1;
+    transition: opacity 0.15s, background 0.15s;
+  }
+  .sidebar-editar-btn:hover { opacity: 1; background: var(--sidebar-hover); }
+  .sidebar-editar-btn.ativo { opacity: 1; color: var(--accent); }
   .sidebar-link {
     display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
     color: var(--sidebar-text); text-decoration: none; font-size: 13px; font-weight: 600; margin-bottom: 4px;
@@ -54,6 +62,11 @@
   .sidebar-link.ativo { background: var(--accent); color: var(--ink-on-accent); }
   .sidebar-link.ativo svg { stroke: var(--ink-on-accent); }
   .sidebar-link svg { flex-shrink: 0; }
+  .sidebar-link[data-menu-key].menu-editando { cursor: grab; }
+  .sidebar-link[data-menu-key].menu-editando::before { content: '⠿'; opacity: 0.55; }
+  .sidebar-link[data-menu-key].arrastando { opacity: 0.35; }
+  .sidebar-link[data-menu-key].alvo-antes { box-shadow: inset 0 2px 0 var(--accent); }
+  .sidebar-link[data-menu-key].alvo-depois { box-shadow: inset 0 -2px 0 var(--accent); }
   .sidebar-separador { border: none; border-top: 1px solid var(--sidebar-border); margin: 14px 0; }
   .sidebar-footer { display: flex; align-items: center; gap: 10px; padding: 10px; margin-top: auto; border-top: 1px solid var(--sidebar-border); }
   .sidebar-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--ink-on-accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
@@ -119,46 +132,52 @@
     </div>
   </div>
 
-  <div class="sidebar-titulo">Painéis Ricapet</div>
+  <div class="sidebar-titulo sidebar-titulo-com-editar" id="tituloPaineis">
+    Painéis Ricapet
+    <button type="button" class="sidebar-editar-btn" id="btnEditarPaineis" title="Reordenar menu">✎</button>
+  </div>
 
-  <a class="sidebar-link" href="https://painel-entrega-turbo.vercel.app/">
+  <a class="sidebar-link" href="https://painel-entrega-turbo.vercel.app/" data-menu-key="dashboard">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
     Dashboard
   </a>
 
-  <a class="sidebar-link" href="https://ricapet-concorrencia.vercel.app">
+  <a class="sidebar-link" href="https://ricapet-concorrencia.vercel.app" data-menu-key="concorrencia">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-7"/></svg>
     Análise de Concorrência
   </a>
 
-  <a class="sidebar-link ativo" href="#">
+  <a class="sidebar-link ativo" href="#" data-menu-key="estoque">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
     Estoque Adesivo
   </a>
 
-  <a class="sidebar-link" href="https://ricapet-ponto-admin.vercel.app">
+  <a class="sidebar-link" href="https://ricapet-ponto-admin.vercel.app" data-menu-key="ponto">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
     Ponto
   </a>
 
-  <a class="sidebar-link" href="https://painel-entrega-turbo.vercel.app/tv.html" target="_blank" rel="noopener">
+  <a class="sidebar-link" href="https://painel-entrega-turbo.vercel.app/tv.html" target="_blank" rel="noopener" data-menu-key="tv">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     Painel TV
   </a>
 
   <hr class="sidebar-separador">
 
-  <div class="sidebar-titulo">Visões</div>
+  <div class="sidebar-titulo sidebar-titulo-com-editar" id="tituloVisoes">
+    Visões
+    <button type="button" class="sidebar-editar-btn" id="btnEditarVisoes" title="Reordenar menu">✎</button>
+  </div>
 
-  <a class="sidebar-link" href="index.html">
+  <a class="sidebar-link" href="index.html" data-menu-key="reposicao">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>
     Painel de Reposição
   </a>
-  <a class="sidebar-link ativo" href="saldo.html">
+  <a class="sidebar-link ativo" href="saldo.html" data-menu-key="saldo">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
     Saldo de Estoque
   </a>
-  <a class="sidebar-link" href="estoque.html">
+  <a class="sidebar-link" href="estoque.html" data-menu-key="atualizar">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 18h6"/></svg>
     Atualizar Estoque
   </a>
@@ -292,6 +311,120 @@
 
   carregar();
 })();
+
+// Reordenar o menu da sidebar (lápis ao lado do título de cada seção):
+// cada link com data-menu-key é arrastável dentro da sua própria seção
+// ("Painéis Ricapet" e "Visões" reordenam de forma independente). A
+// ordem escolhida fica salva em localStorage (por navegador/aparelho) —
+// compartilhada com as demais páginas deste painel, já que é a mesma origem.
+function configurarMenuReordenavel(idTitulo, idBotao, chaveArmazenamento) {
+  const nav = document.querySelector('.sidebar');
+  const titulo = document.getElementById(idTitulo);
+  const btn = document.getElementById(idBotao);
+  if (!nav || !titulo || !btn) return;
+
+  function coletarUnidades() {
+    const unidades = [];
+    let el = titulo.nextElementSibling;
+    while (el && !el.classList.contains('sidebar-separador') && !el.classList.contains('sidebar-footer') && !el.classList.contains('sidebar-titulo')) {
+      if (el.dataset && el.dataset.menuKey) {
+        const unidade = [el];
+        if (el.nextElementSibling && el.nextElementSibling.classList.contains('sidebar-submenu')) {
+          unidade.push(el.nextElementSibling);
+        }
+        unidades.push(unidade);
+        el = unidade[unidade.length - 1].nextElementSibling;
+      } else {
+        el = el.nextElementSibling;
+      }
+    }
+    return unidades;
+  }
+
+  function salvarOrdemAtual() {
+    const chaves = coletarUnidades().map((u) => u[0].dataset.menuKey);
+    localStorage.setItem(chaveArmazenamento, JSON.stringify(chaves));
+  }
+
+  function aplicarOrdemSalva() {
+    let ordem;
+    try { ordem = JSON.parse(localStorage.getItem(chaveArmazenamento) || '[]'); } catch (e) { ordem = []; }
+    if (!ordem.length) return;
+    const unidades = coletarUnidades();
+    const mapa = new Map(unidades.map((u) => [u[0].dataset.menuKey, u]));
+    const usadas = new Set();
+    let ancora = titulo;
+    ordem.forEach((chave) => {
+      const u = mapa.get(chave);
+      if (!u) return;
+      usadas.add(chave);
+      u.forEach((elemento) => { ancora.after(elemento); ancora = elemento; });
+    });
+    unidades.forEach((u) => {
+      if (usadas.has(u[0].dataset.menuKey)) return;
+      u.forEach((elemento) => { ancora.after(elemento); ancora = elemento; });
+    });
+  }
+
+  let arrastando = null;
+
+  function configurarArrasto(u) {
+    const link = u[0];
+    link.addEventListener('dragstart', (e) => {
+      arrastando = u;
+      link.classList.add('arrastando');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    link.addEventListener('dragend', () => {
+      link.classList.remove('arrastando');
+      document.querySelectorAll('.alvo-antes, .alvo-depois').forEach((el) => el.classList.remove('alvo-antes', 'alvo-depois'));
+      arrastando = null;
+    });
+    link.addEventListener('dragover', (e) => {
+      if (!arrastando || arrastando[0] === link) return;
+      e.preventDefault();
+      const rect = link.getBoundingClientRect();
+      const depois = (e.clientY - rect.top) > rect.height / 2;
+      link.classList.toggle('alvo-antes', !depois);
+      link.classList.toggle('alvo-depois', depois);
+    });
+    link.addEventListener('dragleave', () => link.classList.remove('alvo-antes', 'alvo-depois'));
+    link.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const eraDepois = link.classList.contains('alvo-depois');
+      link.classList.remove('alvo-antes', 'alvo-depois');
+      if (!arrastando || arrastando[0] === link) return;
+      const ref = eraDepois ? u[u.length - 1].nextElementSibling : link;
+      arrastando.forEach((elemento) => link.parentNode.insertBefore(elemento, ref));
+      salvarOrdemAtual();
+    });
+  }
+
+  let emEdicao = false;
+
+  nav.addEventListener('click', (e) => {
+    if (!emEdicao) return;
+    const alvo = e.target.closest('.sidebar-link[data-menu-key]');
+    if (alvo && coletarUnidades().some((u) => u[0] === alvo)) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+
+  btn.addEventListener('click', () => {
+    emEdicao = !emEdicao;
+    btn.textContent = emEdicao ? '✓' : '✎';
+    btn.classList.toggle('ativo', emEdicao);
+    btn.title = emEdicao ? 'Concluir edição do menu' : 'Reordenar menu';
+    coletarUnidades().forEach((u) => {
+      u[0].draggable = emEdicao;
+      u[0].classList.toggle('menu-editando', emEdicao);
+    });
+  });
+
+  aplicarOrdemSalva();
+  coletarUnidades().forEach(configurarArrasto);
+}
+
+configurarMenuReordenavel('tituloPaineis', 'btnEditarPaineis', 'ricapet_ordem_menu_paineis');
+configurarMenuReordenavel('tituloVisoes', 'btnEditarVisoes', 'ricapet_ordem_menu_visoes');
 </script>
 </body>
 </html>
